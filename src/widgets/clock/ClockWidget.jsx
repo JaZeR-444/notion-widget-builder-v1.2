@@ -179,7 +179,9 @@ const AnalogClock = ({ time, size, type, colors, config }) => {
   // Generate hour markers based on config.faceMarkers
   const renderMarkers = () => {
     const markers = [];
-    const markerType = config.faceMarkers || type;
+    // Always use config.faceMarkers if available, don't fall back to type
+    // This allows users to customize markers independently of clock type
+    const markerType = config.faceMarkers !== undefined ? config.faceMarkers : type;
 
     if (markerType === 'none') {
       return markers;
@@ -229,7 +231,8 @@ const AnalogClock = ({ time, size, type, colors, config }) => {
 
   // Hand rendering based on handShape config
   const renderHand = (angle, length, handType) => {
-    const handShape = config.handShape || 'classic';
+    // Always use config.handShape if available, default to 'classic'
+    const handShape = config.handShape !== undefined ? config.handShape : 'classic';
     const x2 = center + Math.sin(angle * Math.PI / 180) * length;
     const y2 = center - Math.cos(angle * Math.PI / 180) * length;
 
