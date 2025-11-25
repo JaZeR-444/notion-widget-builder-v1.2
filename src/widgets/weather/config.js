@@ -21,6 +21,20 @@ export const weatherConfig = {
   label: 'Weather',
   description: 'Dynamic weather widget with forecast and customization.',
 
+  // Define sections for better organization
+  sections: [
+    { id: 'locationSettings', label: 'Location Settings', icon: '📍', order: 1 },
+    { id: 'displayConfiguration', label: 'Display Configuration', icon: '📊', order: 2 },
+    { id: 'forecastOptions', label: 'Forecast Options', icon: '📅', order: 3 },
+    { id: 'layoutOptions', label: 'Layout Options', icon: '📐', order: 4 },
+    { id: 'appearance', label: 'Appearance', icon: '🎨', order: 5 },
+    { id: 'typography', label: 'Typography', icon: '🔤', order: 6 },
+    { id: 'background', label: 'Background', icon: '🖼️', order: 7 },
+    { id: 'theme', label: 'Preset Themes', icon: '🎭', order: 8 },
+    { id: 'effects', label: 'Effects', icon: '✨', order: 9 },
+    { id: 'features', label: 'Additional Features', icon: '⚙️', order: 10 }
+  ],
+
   defaultConfig: {
     // Location Settings
     weatherLocation: 'New York, NY',
@@ -29,7 +43,7 @@ export const weatherConfig = {
     numberOfDays: 5,
 
     // Display Configuration
-    currentWeatherFields: ['temperature', 'condition', 'humidity', 'wind'], // Max 4
+    currentWeatherFields: ['temperature', 'condition', 'humidity', 'wind'],
     dailyWeatherFields: ['high', 'low', 'condition', 'precipitation'],
 
     // Forecast Options
@@ -37,72 +51,99 @@ export const weatherConfig = {
     displayDates: false,
 
     // Layout Options
-    orientation: 'auto', // 'auto' | 'horizontal' | 'compact' | 'wide' | 'tall'
+    orientation: 'auto', // 'auto' | 'horizontal' | 'compact' | 'wide'
 
     // Visual Options
     animateIcons: true,
     greyscaleIcons: false,
     textShadows: false,
-    useTransparentBackground: false,
-    setBackgroundColor: true,
-    backgroundColor: JAZER_BRAND.colors.stardustWhite,
     fontScale: 1.0,
 
-    // Color Customization
-    textColorLight: JAZER_BRAND.colors.nightBlack,
-    textColorDark: JAZER_BRAND.colors.stardustWhite,
-    appearanceMode: 'system', // 'do-nothing' | 'system' | 'light' | 'dark'
-
-    // Light Mode Colors (universal styling)
-    lightMode: {
-      textColor: JAZER_BRAND.colors.graphite,
-      backgroundColor: JAZER_BRAND.colors.stardustWhite
+    // Appearance - Unified color management
+    appearanceMode: 'system', // 'light' | 'dark' | 'system'
+    useTransparentBackground: false,
+    theme: {
+      light: {
+        textColor: JAZER_BRAND.colors.graphite,
+        backgroundColor: JAZER_BRAND.colors.stardustWhite
+      },
+      dark: {
+        textColor: JAZER_BRAND.colors.stardustWhite,
+        backgroundColor: JAZER_BRAND.colors.nightBlack
+      }
     },
 
-    // Dark Mode Colors (universal styling)
-    darkMode: {
-      textColor: JAZER_BRAND.colors.stardustWhite,
-      backgroundColor: JAZER_BRAND.colors.nightBlack
-    },
+    // Typography
+    textFontFamily: 'default', // 'default' | 'serif' | 'mono'
+    googleFont: 'none',
+    textAlign: 'center', // 'left' | 'center' | 'right'
+
+    // Background
+    backgroundTexture: 'none', // 'none' | 'noise' | 'stars' | 'dots' | 'grid' | 'waves'
+
+    // Preset Theme
+    presetTheme: 'none',
+
+    // Effects
+    glowEffect: false,
+    gradientText: false,
 
     // Additional Features
     visuallyGroupForecast: false,
     showHoverMenu: true,
     showCustomizeButton: true,
     timeFormat: '12h', // '12h' | '24h'
-    showSevereAlerts: true,
+    showSevereAlerts: true
+  },
 
-    // Typography (universal styling)
-    textFontFamily: 'default', // default, serif, mono
-    googleFont: 'none', // none, orbitron, righteousretro, caveat, permanentmarker, monoton
-    textAlign: 'center', // left, center, right
-
-    // Background (universal styling)
-    backgroundTexture: 'none', // none, noise, stars, dots, grid, waves
-
-    // Preset Theme (universal styling)
-    presetTheme: 'none', // none, cyberpunk, stealth, ocean, sunset, forest, neon
-
-    // Effects (universal styling)
-    glowEffect: false,
-    gradientText: false
+  // Validation rules
+  validation: {
+    weatherLocation: {
+      required: true,
+      type: 'string',
+      minLength: 2
+    },
+    currentWeatherFields: {
+      required: true,
+      type: 'array',
+      minItems: 1,
+      maxItems: 4
+    },
+    dailyWeatherFields: {
+      required: true,
+      type: 'array',
+      minItems: 1
+    },
+    numberOfDays: {
+      type: 'number',
+      min: 3,
+      max: 10
+    },
+    fontScale: {
+      type: 'number',
+      min: 0.8,
+      max: 1.2,
+      step: 0.1
+    }
   },
 
   fields: [
-    // Location Settings Section
+    // ===== Location Settings Section =====
     {
       name: 'weatherLocation',
       label: 'Weather Location',
       type: 'text',
       section: 'locationSettings',
       placeholder: 'City, State or ZIP',
-      helpText: 'Uses free Open-Meteo API - no key required'
+      helpText: 'Uses free Open-Meteo API - no key required',
+      required: true
     },
     {
       name: 'useGeolocation',
       label: 'Auto-Detect Location',
       type: 'boolean',
-      section: 'locationSettings'
+      section: 'locationSettings',
+      helpText: 'Automatically detect user location (requires permission)'
     },
     {
       name: 'preferredUnits',
@@ -127,12 +168,14 @@ export const weatherConfig = {
       ]
     },
 
-    // Display Configuration Section
+    // ===== Display Configuration Section =====
     {
       name: 'currentWeatherFields',
-      label: 'Current Weather Fields (max 4)',
+      label: 'Current Weather Fields',
       type: 'multiselect',
       section: 'displayConfiguration',
+      helpText: 'Select 1-4 fields to display',
+      maxItems: 4,
       options: [
         { label: 'Temperature', value: 'temperature' },
         { label: 'Condition', value: 'condition' },
@@ -156,203 +199,133 @@ export const weatherConfig = {
       ]
     },
 
-    // Forecast Options Section
+    // ===== Forecast Options Section =====
     {
       name: 'hideTodayInForecast',
       label: 'Hide Today in Forecast',
       type: 'boolean',
-      section: 'forecastOptions'
+      section: 'forecastOptions',
+      helpText: 'Show forecast starting from tomorrow'
     },
     {
       name: 'displayDates',
       label: 'Display Dates',
       type: 'boolean',
-      section: 'forecastOptions'
+      section: 'forecastOptions',
+      helpText: 'Show dates alongside day names'
     },
 
-    // Layout Options Section
+    // ===== Layout Options Section =====
     {
       name: 'orientation',
       label: 'Orientation',
       type: 'select',
       section: 'layoutOptions',
       options: [
-        { label: 'Auto', value: 'auto' },
+        { label: 'Auto (Responsive)', value: 'auto' },
         { label: 'Horizontal', value: 'horizontal' },
         { label: 'Compact', value: 'compact' },
-        { label: 'Wide', value: 'wide' },
-        { label: 'Tall', value: 'tall', disabled: true }
+        { label: 'Wide', value: 'wide' }
       ]
     },
 
-    // Visual Options Section
+    // ===== Appearance Section =====
+    {
+      name: 'appearanceMode',
+      label: 'Appearance Mode',
+      type: 'select',
+      section: 'appearance',
+      helpText: 'Control light/dark mode behavior',
+      options: [
+        { label: 'Use System Setting', value: 'system' },
+        { label: 'Light Mode', value: 'light' },
+        { label: 'Dark Mode', value: 'dark' }
+      ]
+    },
+    {
+      name: 'useTransparentBackground',
+      label: 'Transparent Background',
+      type: 'boolean',
+      section: 'appearance',
+      helpText: 'Override background colors with transparency'
+    },
+    {
+      name: 'theme.light.textColor',
+      label: 'Light Mode - Text Color',
+      type: 'color',
+      section: 'appearance',
+      dependsOn: { field: 'useTransparentBackground', value: false }
+    },
+    {
+      name: 'theme.light.backgroundColor',
+      label: 'Light Mode - Background Color',
+      type: 'color',
+      section: 'appearance',
+      dependsOn: { field: 'useTransparentBackground', value: false }
+    },
+    {
+      name: 'theme.dark.textColor',
+      label: 'Dark Mode - Text Color',
+      type: 'color',
+      section: 'appearance',
+      dependsOn: { field: 'useTransparentBackground', value: false }
+    },
+    {
+      name: 'theme.dark.backgroundColor',
+      label: 'Dark Mode - Background Color',
+      type: 'color',
+      section: 'appearance',
+      dependsOn: { field: 'useTransparentBackground', value: false }
+    },
     {
       name: 'animateIcons',
-      label: 'Animate Icons',
+      label: 'Animate Weather Icons',
       type: 'boolean',
-      section: 'visualOptions'
+      section: 'appearance'
     },
     {
       name: 'greyscaleIcons',
       label: 'Greyscale Icons',
       type: 'boolean',
-      section: 'visualOptions'
+      section: 'appearance'
     },
     {
       name: 'textShadows',
       label: 'Text Shadows',
       type: 'boolean',
-      section: 'visualOptions'
-    },
-    {
-      name: 'useTransparentBackground',
-      label: 'Use Transparent Background',
-      type: 'boolean',
-      section: 'visualOptions'
+      section: 'appearance',
+      helpText: 'Add subtle shadows for better readability'
     },
     {
       name: 'fontScale',
       label: 'Font Scale',
       type: 'range',
-      section: 'visualOptions',
+      section: 'appearance',
       min: 0.8,
       max: 1.2,
       step: 0.1
     },
-    {
-      name: 'setBackgroundColor',
-      label: 'Set Background Color',
-      type: 'boolean',
-      section: 'visualOptions'
-    },
-    {
-      name: 'backgroundColor',
-      label: 'Background Color',
-      type: 'color',
-      section: 'visualOptions'
-    },
 
-    // Color Customization Section
-    {
-      name: 'textColorLight',
-      label: 'Text Color (Light Mode)',
-      type: 'color',
-      section: 'colors'
-    },
-    {
-      name: 'textColorDark',
-      label: 'Text Color (Dark Mode)',
-      type: 'color',
-      section: 'colors'
-    },
-    {
-      name: 'appearanceMode',
-      label: 'Dark/Light Appearance',
-      type: 'select',
-      section: 'appearance',
-      options: [
-        { label: 'Do Nothing', value: 'do-nothing' },
-        { label: 'Use System Setting', value: 'system' },
-        { label: 'Light', value: 'light' },
-        { label: 'Dark', value: 'dark' }
-      ]
-    },
-
-    // Light Mode Colors (universal styling)
-    {
-      name: 'lightMode',
-      label: 'Light Mode Settings',
-      type: 'group',
-      section: 'appearance',
-      fields: [
-        {
-          name: 'textColor',
-          label: 'Text Color',
-          type: 'color'
-        },
-        {
-          name: 'backgroundColor',
-          label: 'Background Color',
-          type: 'color'
-        }
-      ]
-    },
-
-    // Dark Mode Colors (universal styling)
-    {
-      name: 'darkMode',
-      label: 'Dark Mode Settings',
-      type: 'group',
-      section: 'appearance',
-      fields: [
-        {
-          name: 'textColor',
-          label: 'Text Color',
-          type: 'color'
-        },
-        {
-          name: 'backgroundColor',
-          label: 'Background Color',
-          type: 'color'
-        }
-      ]
-    },
-
-    // Additional Features Section
-    {
-      name: 'visuallyGroupForecast',
-      label: 'Visually Group Forecast',
-      type: 'boolean',
-      section: 'features'
-    },
-    {
-      name: 'timeFormat',
-      label: 'Time Format',
-      type: 'select',
-      section: 'features',
-      options: [
-        { label: '12-hour (AM/PM)', value: '12h' },
-        { label: '24-hour', value: '24h' }
-      ]
-    },
-    {
-      name: 'showSevereAlerts',
-      label: 'Show Severe Weather Alerts',
-      type: 'boolean',
-      section: 'features'
-    },
-    {
-      name: 'showHoverMenu',
-      label: 'Show Hover Menu',
-      type: 'boolean',
-      section: 'features'
-    },
-    {
-      name: 'showCustomizeButton',
-      label: 'Show Customize Button',
-      type: 'boolean',
-      section: 'features'
-    },
-
-    // Typography Section (universal styling)
+    // ===== Typography Section =====
     {
       name: 'textFontFamily',
-      label: 'Text Font',
+      label: 'Base Font Style',
       type: 'select',
       section: 'typography',
       options: [
-        { label: 'Default', value: 'default' },
+        { label: 'Default (Sans-serif)', value: 'default' },
         { label: 'Serif', value: 'serif' },
-        { label: 'Mono', value: 'mono' }
+        { label: 'Monospace', value: 'mono' }
       ]
     },
     {
       name: 'googleFont',
-      label: 'Google Font Style',
+      label: 'Google Font Override',
       type: 'select',
       section: 'typography',
+      helpText: 'Apply a custom Google Font (overrides base font)',
       options: [
-        { label: 'None (Default)', value: 'none' },
+        { label: 'None', value: 'none' },
         { label: 'Orbitron (Futuristic)', value: 'Orbitron' },
         { label: 'Righteous (Retro)', value: 'Righteous' },
         { label: 'Caveat (Handwritten)', value: 'Caveat' },
@@ -373,12 +346,13 @@ export const weatherConfig = {
       ]
     },
 
-    // Background Texture (universal styling)
+    // ===== Background Section =====
     {
       name: 'backgroundTexture',
       label: 'Background Texture',
       type: 'select',
       section: 'background',
+      helpText: 'Add a subtle pattern overlay',
       options: [
         { label: 'None', value: 'none' },
         { label: 'Noise', value: 'noise' },
@@ -389,14 +363,15 @@ export const weatherConfig = {
       ]
     },
 
-    // Preset Theme (universal styling)
+    // ===== Preset Theme Section =====
     {
       name: 'presetTheme',
       label: 'Preset Theme',
       type: 'select',
       section: 'theme',
+      helpText: 'Quick-apply a pre-designed theme (overrides custom colors)',
       options: [
-        { label: 'None (Custom)', value: 'none' },
+        { label: 'None (Use Custom Settings)', value: 'none' },
         { label: 'Cyberpunk', value: 'cyberpunk' },
         { label: 'Stealth', value: 'stealth' },
         { label: 'Ocean', value: 'ocean' },
@@ -407,18 +382,60 @@ export const weatherConfig = {
       ]
     },
 
-    // Effects (universal styling)
+    // ===== Effects Section =====
     {
       name: 'glowEffect',
       label: 'Neon Glow Effect',
       type: 'boolean',
-      section: 'effects'
+      section: 'effects',
+      helpText: 'Add a subtle glow around elements'
     },
     {
       name: 'gradientText',
       label: 'Gradient Text',
       type: 'boolean',
-      section: 'effects'
+      section: 'effects',
+      helpText: 'Apply color gradients to text'
+    },
+
+    // ===== Additional Features Section =====
+    {
+      name: 'visuallyGroupForecast',
+      label: 'Visually Group Forecast',
+      type: 'boolean',
+      section: 'features',
+      helpText: 'Add visual separation between forecast days'
+    },
+    {
+      name: 'timeFormat',
+      label: 'Time Format',
+      type: 'select',
+      section: 'features',
+      options: [
+        { label: '12-hour (AM/PM)', value: '12h' },
+        { label: '24-hour', value: '24h' }
+      ]
+    },
+    {
+      name: 'showSevereAlerts',
+      label: 'Show Severe Weather Alerts',
+      type: 'boolean',
+      section: 'features',
+      helpText: 'Display warnings for severe weather conditions'
+    },
+    {
+      name: 'showHoverMenu',
+      label: 'Show Hover Menu',
+      type: 'boolean',
+      section: 'features',
+      helpText: 'Display interactive menu on hover'
+    },
+    {
+      name: 'showCustomizeButton',
+      label: 'Show Customize Button',
+      type: 'boolean',
+      section: 'features',
+      helpText: 'Show button to open customization panel'
     }
   ]
 };
