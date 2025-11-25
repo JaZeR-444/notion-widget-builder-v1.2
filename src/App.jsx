@@ -10,8 +10,9 @@ import {
   Trash2, Copy as CopyIcon, CornerDownRight, ArrowUp, ArrowDown,
   Eye, EyeOff, MoreHorizontal, CloudRain, Sun, Moon, Wind,
   Droplets, Thermometer, MapPin, Lock, Calendar, Activity,
-  MousePointer, Zap, Type, Loader, Rocket
+  MousePointer, Zap, Type, Loader, Rocket, Upload
 } from 'lucide-react';
+import ColorThief from 'colorthief';
 
 import { counterConfig } from './widgets/counter/config';
 import { CounterWidget } from './widgets/counter/CounterWidget';
@@ -37,11 +38,13 @@ import { clockConfig } from './widgets/clock/config';
 import { ClockWidget } from './widgets/clock/ClockWidget';
 import { generateClockHTML, generateClockScript } from './widgets/clock/export';
 
-import { countdownConfig } from './widgets/countdown/config';
-import { CountdownWidget } from './widgets/countdown/CountdownWidget';
-import { generateCountdownHTML, generateCountdownScript } from './widgets/countdown/export';
+import { countdownConfig } from './widgets/Countdown/config';
+import { CountdownWidget } from './widgets/Countdown/CountdownWidget';
+import { generateCountdownHTML, generateCountdownScript } from './widgets/Countdown/export';
 
-import newButtonGenerator from './widgets/newButtonGenerator/ButtonGeneratorWidget'; // Default import
+import { newButtonGenerator } from './widgets/newButtonGenerator/ButtonGeneratorWidget'; // Named import
+
+import BrandLogoUploader from './components/BrandLogoUploader';
 
 // --- CONSTANTS & CONFIG ---
 
@@ -102,7 +105,7 @@ const JAZER_BRAND = {
     heading: '"Orbitron", system-ui, sans-serif',
     body: '"Montserrat", system-ui, sans-serif'
   },
-  
+
   fontFamily: '"Montserrat", system-ui, sans-serif',
 
   sizes: {
@@ -320,6 +323,7 @@ const BrandColorPalette = () => (
   </div>
 );
 
+
 // Emoji Picker Component with Search
 const EmojiPicker = ({ onSelect, onClose }) => {
   const [search, setSearch] = useState("");
@@ -464,21 +468,21 @@ const ButtonManager = ({ value, onChange }) => {
                   onClick={(e) => copyStyle(idx, e)}
                   title="Copy style to all"
                 >
-                  <CornerDownRight size={12}/>
+                  <CornerDownRight size={12} />
                 </button>
                 <button
                   className="p-1 text-gray-500 hover:text-white hover:bg-gray-700 rounded"
                   onClick={(e) => duplicateButton(idx, e)}
                   title="Duplicate"
                 >
-                  <CopyIcon size={12}/>
+                  <CopyIcon size={12} />
                 </button>
                 <button
                   className="p-1 text-gray-500 hover:text-red-400 hover:bg-red-900/30 rounded"
                   onClick={(e) => deleteButton(idx, e)}
                   title="Delete"
                 >
-                  <Trash2 size={12}/>
+                  <Trash2 size={12} />
                 </button>
                 <ChevronRight
                   size={12}
@@ -515,7 +519,7 @@ const ButtonManager = ({ value, onChange }) => {
                 </div>
 
                 <div>
-                  <label className="text-[9px] uppercase font-bold text-gray-500 mb-1 flex justify-between">URL <HelpCircle size={10} className="opacity-50"/></label>
+                  <label className="text-[9px] uppercase font-bold text-gray-500 mb-1 flex justify-between">URL <HelpCircle size={10} className="opacity-50" /></label>
                   <div className="relative">
                     <input
                       className="w-full bg-[#0f1115] border border-gray-700 text-blue-400 p-1.5 pl-6 rounded text-xs outline-none focus:border-purple-500"
@@ -554,7 +558,7 @@ const ButtonManager = ({ value, onChange }) => {
 
                 <div className="border-t border-gray-800 pt-2 space-y-2">
                   <label className="text-[9px] uppercase font-bold text-purple-400 flex items-center gap-1">
-                    <Palette size={10}/> Custom Styles
+                    <Palette size={10} /> Custom Styles
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
@@ -819,14 +823,14 @@ const WidgetField = ({ field, value, onChange }) => {
                   className="p-1 hover:text-white text-gray-500 disabled:opacity-20"
                   disabled={i === 0}
                 >
-                  <ArrowUp size={12}/>
+                  <ArrowUp size={12} />
                 </button>
                 <button
                   onClick={() => move(i, 1)}
                   className="p-1 hover:text-white text-gray-500 disabled:opacity-20"
                   disabled={i === value.length - 1}
                 >
-                  <ArrowDown size={12}/>
+                  <ArrowDown size={12} />
                 </button>
               </div>
             </div>
@@ -1091,7 +1095,7 @@ const WIDGET_REGISTRY = {
     generateScript: generateImageGalleryScript
   },
   newButtonGenerator: newButtonGenerator, // Added new button generator
-  quote: {
+  quotes: {
     ...quotesConfig,
     icon: <Quote className="w-4 h-4" />,
     Component: QuotesWidget,
@@ -1234,7 +1238,7 @@ const ExportModal = ({ isOpen, onClose, widgetDef, config }) => {
               onClick={copyCode}
               className="w-full bg-gray-800 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2"
             >
-              <Code size={16}/> Copy HTML Code
+              <Code size={16} /> Copy HTML Code
             </button>
             <p className="text-xs text-gray-500">
               Copy the full HTML code and save it as a .html file. Host it on GitHub Pages, Netlify, or Vercel.
@@ -1500,6 +1504,79 @@ function NotionWidgetBuilder({ initialWidgetId, onBack }) {
 
           {/* Optional: Brand Palette Visualization */}
           {activeBrandId === 'jazer' && <BrandColorPalette />}
+
+          {/* Brand Logo Color Extraction */}
+          <BrandLogoUploader
+            onColorsExtracted={(theme) => {
+              // Apply extracted colors to widget configuration
+              const newConfig = { ...config };
+
+              // Map colors based on widget type
+              if (activeWidgetId === 'clock') {
+                newConfig.lightMode = {
+                  ...newConfig.lightMode,
+                  textColor: theme.text,
+                  panelColor: theme.background,
+                  digitColor: theme.primary
+                };
+                newConfig.darkMode = {
+                  ...newConfig.darkMode,
+                  textColor: theme.background,
+                  panelColor: theme.text,
+                  digitColor: theme.secondary
+                };
+              } else if (activeWidgetId === 'countdown') {
+                newConfig.lightMode = {
+                  ...newConfig.lightMode,
+                  textColor: theme.text,
+                  panelColor: theme.background,
+                  digitColor: theme.primary
+                };
+                newConfig.darkMode = {
+                  ...newConfig.darkMode,
+                  textColor: theme.background,
+                  panelColor: theme.text,
+                  digitColor: theme.secondary
+                };
+              } else if (activeWidgetId === 'counter') {
+                newConfig.lightTextColor = theme.text;
+                newConfig.darkTextColor = theme.background;
+                newConfig.bgColor = theme.background;
+              } else if (activeWidgetId === 'newButtonGenerator') {
+                // Apply to all buttons
+                if (newConfig.buttons && Array.isArray(newConfig.buttons)) {
+                  newConfig.buttons = newConfig.buttons.map((btn, idx) => ({
+                    ...btn,
+                    bgColor: theme.palette[idx % theme.palette.length] || theme.primary,
+                    textColor: theme.background,
+                    outlineColor: theme.accent
+                  }));
+                }
+              } else if (activeWidgetId === 'quotes') {
+                newConfig.lightMode = {
+                  ...newConfig.lightMode,
+                  textColor: theme.text,
+                  authorColor: theme.secondary,
+                  backgroundColor: theme.background
+                };
+                newConfig.darkMode = {
+                  ...newConfig.darkMode,
+                  textColor: theme.background,
+                  authorColor: theme.accent,
+                  backgroundColor: theme.text
+                };
+              } else {
+                // Generic color mapping for other widgets
+                newConfig.bgColor = theme.background;
+                newConfig.textColor = theme.text;
+                if (newConfig.accentColor !== undefined) {
+                  newConfig.accentColor = theme.primary;
+                }
+              }
+
+              setConfig(newConfig);
+            }}
+          />
 
           <hr className="border-neutral-100" />
 
