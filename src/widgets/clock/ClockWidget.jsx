@@ -420,15 +420,6 @@ export const ClockWidget = ({ config }) => {
     }
   }, [config.responsiveSizing]);
 
-  // Add CSS variables for instant color updates
-  useEffect(() => {
-    const root = document.documentElement;
-    root.style.setProperty('--clock-bg-color', colors.backgroundColor);
-    root.style.setProperty('--clock-primary-color', colors.clockColor);
-    root.style.setProperty('--clock-text-color', colors.textColor);
-    root.style.setProperty('--clock-digit-color', colors.digitColor);
-  }, [colors]);
-
   // Timer countdown logic
   useEffect(() => {
     if (config.widgetMode === 'timer' && timerRunning) {
@@ -489,18 +480,31 @@ export const ClockWidget = ({ config }) => {
   }, [config.appearance]);
 
   // Get active colors based on mode and preset theme
-  let colors = isDark ? config.darkMode : config.lightMode;
+  const colors = React.useMemo(() => {
+    let computedColors = isDark ? config.darkMode : config.lightMode;
 
-  // Apply preset theme if selected
-  if (config.presetTheme && config.presetTheme !== 'none' && PRESET_THEMES[config.presetTheme]) {
-    const theme = PRESET_THEMES[config.presetTheme];
-    colors = {
-      backgroundColor: theme.backgroundColor,
-      clockColor: theme.clockColor,
-      digitColor: theme.digitColor,
-      textColor: theme.textColor
-    };
-  }
+    // Apply preset theme if selected
+    if (config.presetTheme && config.presetTheme !== 'none' && PRESET_THEMES[config.presetTheme]) {
+      const theme = PRESET_THEMES[config.presetTheme];
+      computedColors = {
+        backgroundColor: theme.backgroundColor,
+        clockColor: theme.clockColor,
+        digitColor: theme.digitColor,
+        textColor: theme.textColor
+      };
+    }
+
+    return computedColors;
+  }, [isDark, config.darkMode, config.lightMode, config.presetTheme]);
+
+  // Add CSS variables for instant color updates
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--clock-bg-color', colors.backgroundColor);
+    root.style.setProperty('--clock-primary-color', colors.clockColor);
+    root.style.setProperty('--clock-text-color', colors.textColor);
+    root.style.setProperty('--clock-digit-color', colors.digitColor);
+  }, [colors]);
 
   // Font mapping with Google Fonts support
   const getFontFamily = (fontType, isDigit = false) => {
