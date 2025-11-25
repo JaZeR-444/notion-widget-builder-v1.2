@@ -20,6 +20,16 @@ const JAZER_BRAND = {
   }
 };
 
+// Constants
+const REFRESH_INTERVAL_MS = 600000; // 10 minutes
+const MIN_FORECAST_DAYS = 1;
+const MAX_FORECAST_DAYS = 14;
+const DEFAULT_FORECAST_DAYS = 5;
+const MIN_FONT_SCALE = 0.5;
+const MAX_FONT_SCALE = 2.0;
+const DEFAULT_FONT_SCALE = 1.0;
+const MAX_LOCATION_LENGTH = 100;
+
 const escapeHTML = (str) => {
   if (typeof str !== 'string') return str;
   const map = {
@@ -30,6 +40,24 @@ const escapeHTML = (str) => {
     "'": '&#39;'
   };
   return str.replace(/[&<>"']/g, (char) => map[char]);
+};
+
+/**
+ * Sanitizes location input to prevent XSS and script injection.
+ * Removes dangerous characters and limits length.
+ * @param {string} location - The location string to sanitize
+ * @returns {string} - Sanitized location string
+ */
+const sanitizeLocation = (location) => {
+  if (typeof location !== 'string') return 'New York, NY';
+  // Remove potentially dangerous characters for JavaScript string context
+  // Allow letters, numbers, spaces, commas, periods, hyphens, and apostrophes
+  const sanitized = location
+    .replace(/[\\`${}]/g, '') // Remove characters that could break template literals or enable injection
+    .replace(/'/g, "\\'") // Escape single quotes for JavaScript string
+    .trim()
+    .slice(0, MAX_LOCATION_LENGTH);
+  return sanitized || 'New York, NY';
 };
 
 const weatherIcons = {
@@ -52,6 +80,17 @@ const weatherIcons = {
   tornado: '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 4H3m15 4H6m11 4H9m7 4h-7m5 4h-3"/></svg>'
 };
 
+/**
+ * Generates complete standalone HTML for the weather widget.
+ * Includes embedded styles, scripts, and weather fetching logic.
+ * @param {Object} config - Widget configuration object
+ * @param {string} config.weatherLocation - Location to display weather for
+ * @param {string} config.appearanceMode - 'light', 'dark', or 'system'
+ * @param {string} config.preferredUnits - 'metric' or 'imperial'
+ * @param {number} config.numberOfDays - Number of forecast days (1-14)
+ * @param {number} config.fontScale - Font size multiplier (0.5-2.0)
+ * @returns {string} - Complete HTML document as string
+ */
 export const generateWeatherHTML = (config) => {
   const isDark = config.appearanceMode === 'dark';
   const textColor = isDark ? config.textColorDark : config.textColorLight;
@@ -162,9 +201,8 @@ export const generateWeatherHTML = (config) => {
   ` : '';
   const fontFamily = getFontFamily();
   const textAlign = config.textAlign || 'center';
-  const tempUnit = config.preferredUnits === 'metric' ? '°C' : '°F';
-  const windUnit = config.preferredUnits === 'metric' ? 'km/h' : 'mph';
-  const fontScale = config.fontScale || 1.0;
+  // Validate and constrain fontScale to safe range
+  const fontScale = Math.max(MIN_FONT_SCALE, Math.min(MAX_FONT_SCALE, config.fontScale || DEFAULT_FONT_SCALE));
   
   // Google Font URL
   const googleFontUrl = config.googleFont !== 'none' 
@@ -414,15 +452,24 @@ export const generateWeatherHTML = (config) => {
 </html>`;
 };
 
+/**
+ * Generates the JavaScript code for the weather widget.
+ * Includes weather fetching, rendering, and error handling.
+ * @param {Object} config - Widget configuration object
+ * @returns {string} - Generated JavaScript code
+ */
 export const generateWeatherScript = (config) => {
-  const location = config.weatherLocation || 'New York, NY';
-  const units = config.preferredUnits === 'metric' ? 'metric' : 'imperial';
+  // Sanitize location to prevent XSS in generated script
+  const location = sanitizeLocation(config.weatherLocation || 'New York, NY');
   const tempUnitAPI = config.preferredUnits === 'metric' ? 'celsius' : 'fahrenheit';
   const windUnitAPI = config.preferredUnits === 'metric' ? 'kmh' : 'mph';
   const precipUnitAPI = config.preferredUnits === 'metric' ? 'mm' : 'inch';
   const tempUnit = config.preferredUnits === 'metric' ? '°C' : '°F';
   const windUnit = config.preferredUnits === 'metric' ? 'km/h' : 'mph';
-  const fontScale = config.fontScale || 1.0;
+  // Validate and constrain fontScale to safe range
+  const fontScale = Math.max(MIN_FONT_SCALE, Math.min(MAX_FONT_SCALE, config.fontScale || DEFAULT_FONT_SCALE));
+  // Validate and constrain numberOfDays to safe range
+  const numberOfDays = Math.max(MIN_FORECAST_DAYS, Math.min(MAX_FORECAST_DAYS, config.numberOfDays || DEFAULT_FORECAST_DAYS));
   
   return `
     const LOCATION = '${location}';
@@ -436,8 +483,9 @@ export const generateWeatherScript = (config) => {
     const DISPLAY_DATES = ${config.displayDates || false};
     const CURRENT_FIELDS = ${JSON.stringify(config.currentWeatherFields || [])};
     const DAILY_FIELDS = ${JSON.stringify(config.dailyWeatherFields || [])};
-    const NUM_DAYS = ${config.numberOfDays || 5};
+    const NUM_DAYS = ${numberOfDays};
     const HIDE_TODAY = ${config.hideTodayInForecast || false};
+    const REFRESH_INTERVAL_MS = ${REFRESH_INTERVAL_MS};
 
     const weatherIcons = ${JSON.stringify(weatherIcons)};
 
@@ -471,17 +519,37 @@ export const generateWeatherScript = (config) => {
       return 'clouds';
     }
 
+    function renderErrorState(message) {
+      const errorIcon = '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6m0-6 6 6"/></svg>';
+      const html = \`
+        <div class="weather-container" style="text-align: center; padding: 32px;">
+          <div style="opacity: 0.6; margin-bottom: 16px;">\${errorIcon}</div>
+          <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Unable to Load Weather</h3>
+          <p style="font-size: 14px; opacity: 0.7; margin-bottom: 16px;">\${message}</p>
+          <button onclick="fetchWeatherData()" style="padding: 8px 16px; border-radius: 8px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: inherit; cursor: pointer; font-size: 14px;">
+            Try Again
+          </button>
+        </div>
+      \`;
+      document.getElementById('weather-root').innerHTML = html;
+    }
+
     async function fetchWeatherData() {
       try {
+        // Note: Open-Meteo API has rate limits. Consider caching responses for production use.
         // Geocode the location using Open-Meteo
         const geoResponse = await fetch(
           \`https://geocoding-api.open-meteo.com/v1/search?name=\${encodeURIComponent(LOCATION)}&count=1&language=en&format=json\`
         );
         
-        if (!geoResponse.ok) throw new Error('Location not found');
+        if (!geoResponse.ok) {
+          throw new Error('Unable to find location. Please check the location name.');
+        }
         
         const geoData = await geoResponse.json();
-        if (!geoData.results || geoData.results.length === 0) throw new Error('Location not found');
+        if (!geoData.results || geoData.results.length === 0) {
+          throw new Error('Location not found. Please try a different city name.');
+        }
 
         const { latitude, longitude } = geoData.results[0];
 
@@ -490,14 +558,16 @@ export const generateWeatherScript = (config) => {
           \`https://api.open-meteo.com/v1/forecast?latitude=\${latitude}&longitude=\${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max&temperature_unit=\${TEMP_UNIT_API}&wind_speed_unit=\${WIND_UNIT_API}&precipitation_unit=\${PRECIP_UNIT_API}&timezone=auto\`
         );
 
-        if (!weatherResponse.ok) throw new Error('Failed to fetch weather data');
+        if (!weatherResponse.ok) {
+          throw new Error('Weather service temporarily unavailable. Please try again later.');
+        }
 
         const data = await weatherResponse.json();
 
         renderWeatherData(data);
       } catch (err) {
         console.error('Weather fetch error:', err);
-        renderMockWeather();
+        renderErrorState(err.message || 'Could not load weather data. Please try again.');
       }
     }
 
@@ -578,35 +648,10 @@ export const generateWeatherScript = (config) => {
       document.getElementById('weather-root').innerHTML = html;
     }
 
-    function renderMockWeather() {
-      // Fallback to mock data if API fails
-      const mockData = {
-        current: {
-          temperature_2m: 72,
-          weather_code: 2,
-          relative_humidity_2m: 65,
-          wind_speed_10m: 12,
-          apparent_temperature: 70
-        },
-        daily: {
-          time: Array.from({ length: 7 }, (_, i) => 
-            new Date(Date.now() + i * 86400000).toISOString().split('T')[0]
-          ),
-          temperature_2m_max: [75, 72, 68, 70, 74, 76, 73],
-          temperature_2m_min: [58, 60, 55, 57, 59, 61, 60],
-          weather_code: [0, 3, 61, 2, 0, 0, 2],
-          precipitation_probability_max: [0, 10, 80, 20, 0, 0, 15],
-          wind_speed_10m_max: [8, 10, 15, 12, 7, 9, 11]
-        }
-      };
-
-      renderWeatherData(mockData);
-    }
-
     // Initial load
     fetchWeatherData();
 
-    // Refresh every 10 minutes
-    setInterval(fetchWeatherData, 600000);
+    // Refresh at configured interval
+    setInterval(fetchWeatherData, REFRESH_INTERVAL_MS);
   `;
 };
