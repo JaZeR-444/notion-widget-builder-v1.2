@@ -1,0 +1,125 @@
+import React, { useState, useEffect } from 'react';
+
+export const ImageGalleryWidget = ({ config }) => {
+  const images = config.images.filter(Boolean); // Ensure no empty strings
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isDark, setIsDark] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  // Handle dark/light mode
+  useEffect(() => {
+    if (config.appearanceMode === 'system') {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      setIsDark(mq.matches);
+      const handler = (e) => setIsDark(e.matches);
+      mq.addEventListener('change', handler);
+      return () => mq.removeEventListener('change', handler);
+    } else if (config.appearanceMode === 'dark') {
+      setIsDark(true);
+    } else {
+      setIsDark(false);
+    }
+  }, [config.appearanceMode]);
+
+  // Handle autoplay
+  useEffect(() => {
+    if (config.animateGallerySpeedToggle && images.length > 1) {
+      const speedMs = parseFloat(config.scrollSpeed) * 1000;
+      const interval = setInterval(() => {
+        setCurrentImageIndex((prevIndex) => (prevIndex + 1) % images.length);
+      }, speedMs);
+      return () => clearInterval(interval);
+    }
+  }, [config.animateGallerySpeedToggle, config.scrollSpeed, images.length]);
+
+  if (images.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full w-full text-neutral-500">
+        No images configured. Please add at least one image URL.
+      </div>
+    );
+  }
+
+  const handleNext = () => {
+    setImageError(false); // Reset error on navigation
+    setCurrentImageIndex((prevIndex) => (prevIndex + 1) % images.length);
+  };
+
+  const handlePrev = () => {
+    setImageError(false); // Reset error on navigation
+    setCurrentImageIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
+  };
+
+  const currentImage = images[currentImageIndex];
+
+  const arrowColor = isDark ? config.arrowColorDark : config.arrowColorLight;
+  const dotsColor = isDark ? config.dotsColorDark : config.dotsColorLight;
+  const slideBg = config.transparentBackground ? 'transparent' : config.slideBackgroundColor;
+  const boxShadow = config.dropShadows ? '0 4px 8px rgba(0,0,0,0.3)' : 'none';
+
+  return (
+    <div 
+      className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden" 
+      style={{ backgroundColor: slideBg, boxShadow: boxShadow }}
+    >
+      {/* Image Display */}
+      {imageError ? (
+        <div className="flex items-center justify-center h-full w-full bg-neutral-200 text-neutral-500">
+          Error loading image.
+        </div>
+      ) : (
+        <img
+          src={currentImage}
+          alt="Gallery Image"
+          className="max-w-full max-h-full transition-opacity duration-500"
+          style={{ objectFit: config.sizingMode === 'wrap' ? 'unset' : config.sizingMode, height: '100%' }}
+          onError={() => setImageError(true)}
+          onLoad={() => setImageError(false)}
+        />
+      )}
+
+      {/* Navigation Arrows */}
+      {config.overlayArrows && images.length > 1 && (
+        <>
+          <button 
+            onClick={handlePrev} 
+            className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black bg-opacity-50 text-white text-2xl"
+            style={{ color: arrowColor }}
+          >
+            &lt;
+          </button>
+          <button 
+            onClick={handleNext} 
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black bg-opacity-50 text-white text-2xl"
+            style={{ color: arrowColor }}
+          >
+            &gt;
+          </button>
+        </>
+      )}
+
+      {/* Dots Indicator */}
+      {config.dotsIndicator && images.length > 1 && (
+        <div className="absolute bottom-4 flex gap-2">
+          {images.map((_, index) => (
+            <span
+              key={index}
+              className={`block w-3 h-3 rounded-full ${index === currentImageIndex ? 'opacity-100' : 'opacity-50'}`}
+              style={{ backgroundColor: dotsColor, cursor: 'pointer' }}
+              onClick={() => setCurrentImageIndex(index)}
+            ></span>
+          ))}
+        </div>
+      )}
+
+      {/* Customization Button */}
+      {config.showCustomizeButton && (
+        <button
+          className="absolute bottom-4 right-4 px-4 py-2 rounded-lg text-sm font-medium bg-blue-500 text-white"
+        >
+          Customize
+        </button>
+      )}
+    </div>
+  );
+};
