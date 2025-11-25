@@ -90,7 +90,6 @@ const getWeatherFromWMO = (code) => {
   }
   
   // Range-based fallback for codes not explicitly mapped
-  if (code === 0) return { condition: 'Clear', icon: 'clear' };
   if (code <= 3) return { condition: 'Partly Cloudy', icon: 'partly-cloudy' };
   if (code <= 48) return { condition: 'Fog', icon: 'fog' };
   if (code <= 57) return { condition: 'Drizzle', icon: 'drizzle' };
@@ -564,7 +563,7 @@ export const WeatherWidget = ({ config }) => {
     return config.setBackgroundColor 
       ? config.backgroundColor 
       : (gradients[condition] || (isDark ? JAZER_BRAND.colors.nightBlack : JAZER_BRAND.colors.stardustWhite));
-  }, [config.useTransparentBackground, config.setBackgroundColor, config.backgroundColor, config.presetTheme, presetTheme.gradient, weatherData, isDark]);
+  }, [config.useTransparentBackground, config.setBackgroundColor, config.backgroundColor, config.presetTheme, presetTheme, weatherData, isDark]);
   
   // Glassmorphism styles for transparent background (memoized)
   const glassmorphismStyles = useMemo(() => {
