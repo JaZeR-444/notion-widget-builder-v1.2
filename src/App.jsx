@@ -688,7 +688,11 @@ const WidgetField = ({ field, value, onChange }) => {
           onChange={e => onChange(e.target.value)}
           className="w-full bg-gray-800 text-white text-sm p-2 rounded border border-gray-700 outline-none focus:border-purple-500"
         >
-          {field.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {field.options.map(o => (
+            <option key={o.value} value={o.value} disabled={o.disabled}>
+              {o.label}
+            </option>
+          ))}
         </select>
       </div>
     );
@@ -1311,6 +1315,7 @@ function NotionWidgetBuilder({ initialWidgetId, onBack }) {
   const [activeWidgetId, setActiveWidgetId] = useState(initialWidgetId);
   const [activeBrandId, setActiveBrandId] = useState('none');
   const [config, setConfig] = useState(WIDGET_REGISTRY[initialWidgetId].defaultConfig);
+  const [brandTheme, setBrandTheme] = useState(null); // Store extracted brand colors
 
   // EXPORT STATES
   const [showExport, setShowExport] = useState(false);
@@ -1461,6 +1466,7 @@ function NotionWidgetBuilder({ initialWidgetId, onBack }) {
                 config={debouncedConfig}
                 onConfigChange={handleConfigChange}
                 brand={JAZER_BRAND}
+                brandTheme={brandTheme}
               />
             </WidgetErrorBoundary>
           </div>
@@ -1508,6 +1514,9 @@ function NotionWidgetBuilder({ initialWidgetId, onBack }) {
           {/* Brand Logo Color Extraction */}
           <BrandLogoUploader
             onColorsExtracted={(theme) => {
+              // Save brand theme for generating dynamic presets
+              setBrandTheme(theme);
+
               // Apply extracted colors to widget configuration
               const newConfig = { ...config };
 
@@ -1610,15 +1619,18 @@ function NotionWidgetBuilder({ initialWidgetId, onBack }) {
             </div>
 
             {/* Group fields by section */}
-            {['time', 'style', 'typography', 'background', 'appearance', 'features', 'effects'].map(section => {
+            {['time', 'style', 'analog', 'typography', 'background', 'interactive', 'theme', 'appearance', 'features', 'effects'].map(section => {
               const sectionFields = ActiveWidget.fields.filter(f => f.section === section);
               if (sectionFields.length === 0) return null;
 
               const sectionTitles = {
                 time: 'Time Display',
                 style: 'Clock Style',
+                analog: 'Analog Customization',
                 typography: 'Typography',
                 background: 'Background',
+                interactive: 'Interactive Mode',
+                theme: 'Preset Themes',
                 appearance: 'Appearance Mode',
                 features: 'Additional Features',
                 effects: 'Visual Effects',
@@ -1632,14 +1644,36 @@ function NotionWidgetBuilder({ initialWidgetId, onBack }) {
                   <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide border-b pb-1">
                     {sectionTitles[section]}
                   </div>
-                  {sectionFields.map(f => (
-                    <WidgetField
-                      key={f.name}
-                      field={f}
-                      value={config[f.name]}
-                      onChange={(val) => handleConfigChange(f.name, val)}
-                    />
-                  ))}
+                  {sectionFields.map(f => {
+                    // Dynamically add brand preset options to presetTheme field
+                    let field = f;
+                    if (f.name === 'presetTheme' && brandTheme && activeWidgetId === 'clock') {
+                      const brandPresets = [
+                        { label: '--- Brand-Based Themes ---', value: '__separator__', disabled: true },
+                        { label: 'Brand Monochrome', value: 'brand-monochrome' },
+                        { label: 'Brand Contrast', value: 'brand-contrast' },
+                        { label: 'Brand Vibrant', value: 'brand-vibrant' },
+                        { label: 'Brand Professional', value: 'brand-professional' },
+                        { label: 'Brand Dark', value: 'brand-dark' },
+                        { label: 'Brand Light', value: 'brand-light' },
+                        { label: 'Brand Neon', value: 'brand-neon' },
+                        { label: 'Brand Minimal', value: 'brand-minimal' }
+                      ];
+                      field = {
+                        ...f,
+                        options: [...f.options, ...brandPresets]
+                      };
+                    }
+
+                    return (
+                      <WidgetField
+                        key={f.name}
+                        field={field}
+                        value={config[f.name]}
+                        onChange={(val) => handleConfigChange(f.name, val)}
+                      />
+                    );
+                  })}
                 </div>
               );
             })}

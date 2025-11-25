@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { generateBrandPresets } from '../../utils/brandThemeGenerator';
 
 // JAZER_BRAND constants
 const JAZER_BRAND = {
@@ -332,7 +333,7 @@ const AnalogClock = ({ time, size, type, colors, config }) => {
   );
 };
 
-export const ClockWidget = ({ config }) => {
+export const ClockWidget = ({ config, brandTheme }) => {
   const [time, setTime] = useState(new Date());
   const [isDark, setIsDark] = useState(() => {
     if (config.appearance === 'dark') return true;
@@ -479,23 +480,40 @@ export const ClockWidget = ({ config }) => {
     }
   }, [config.appearance]);
 
+  // Generate brand-based presets if brand theme is available
+  const brandPresets = React.useMemo(() => {
+    if (!brandTheme) return [];
+    return generateBrandPresets(brandTheme);
+  }, [brandTheme]);
+
+  // Merge static and brand-based presets
+  const allPresets = React.useMemo(() => {
+    const combined = { ...PRESET_THEMES };
+    brandPresets.forEach(preset => {
+      combined[preset.id] = preset;
+    });
+    return combined;
+  }, [brandPresets]);
+
   // Get active colors based on mode and preset theme
   const colors = React.useMemo(() => {
     let computedColors = isDark ? config.darkMode : config.lightMode;
 
-    // Apply preset theme if selected
-    if (config.presetTheme && config.presetTheme !== 'none' && PRESET_THEMES[config.presetTheme]) {
-      const theme = PRESET_THEMES[config.presetTheme];
-      computedColors = {
-        backgroundColor: theme.backgroundColor,
-        clockColor: theme.clockColor,
-        digitColor: theme.digitColor,
-        textColor: theme.textColor
-      };
+    // Apply preset theme if selected (check both static and brand-based)
+    if (config.presetTheme && config.presetTheme !== 'none') {
+      const theme = allPresets[config.presetTheme];
+      if (theme) {
+        computedColors = {
+          backgroundColor: theme.backgroundColor,
+          clockColor: theme.clockColor,
+          digitColor: theme.digitColor,
+          textColor: theme.textColor
+        };
+      }
     }
 
     return computedColors;
-  }, [isDark, config.darkMode, config.lightMode, config.presetTheme]);
+  }, [isDark, config.darkMode, config.lightMode, config.presetTheme, allPresets]);
 
   // Add CSS variables for instant color updates
   useEffect(() => {
@@ -536,8 +554,8 @@ export const ClockWidget = ({ config }) => {
 
   // Get background texture
   const getBackgroundTexture = () => {
-    const texture = config.presetTheme !== 'none' && PRESET_THEMES[config.presetTheme]
-      ? PRESET_THEMES[config.presetTheme].texture
+    const texture = config.presetTheme !== 'none' && allPresets[config.presetTheme]
+      ? allPresets[config.presetTheme].texture
       : config.backgroundTexture;
 
     switch (texture) {
