@@ -50,10 +50,12 @@ const escapeHTML = (str) => {
  */
 const sanitizeLocation = (location) => {
   if (typeof location !== 'string') return 'New York, NY';
-  // Remove potentially dangerous characters for JavaScript string context
-  // Allow letters, numbers, spaces, commas, periods, hyphens, and apostrophes
+  // Sanitize for JavaScript string context using allowlist approach
+  // Only allow safe characters: letters, numbers, spaces, commas, periods, hyphens, and apostrophes
+  // Note: Backslashes and other dangerous chars are removed by the allowlist BEFORE quote escaping,
+  // so the incomplete-sanitization warning is a false positive.
   const sanitized = location
-    .replace(/[\\`${}]/g, '') // Remove characters that could break template literals or enable injection
+    .replace(/[^a-zA-Z0-9\s,.\-']/g, '') // Remove all chars except allowed ones (allowlist)
     .replace(/'/g, "\\'") // Escape single quotes for JavaScript string
     .trim()
     .slice(0, MAX_LOCATION_LENGTH);
