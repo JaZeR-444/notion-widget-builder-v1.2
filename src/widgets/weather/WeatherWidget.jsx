@@ -454,8 +454,8 @@ export const WeatherWidget = ({ config }) => {
   
   // Get font family based on config (memoized)
   const fontFamily = useMemo(() => {
-    if (config.googleFont !== 'none') {
-      return `"${config.googleFont.replace(/\+/g, ' ')}", system-ui, sans-serif`;
+    if (config.googleFont && config.googleFont !== 'none') {
+      return `"${String(config.googleFont).replace(/\+/g, ' ')}", system-ui, sans-serif`;
     }
     
     switch (config.textFontFamily) {
@@ -653,14 +653,39 @@ export const WeatherWidget = ({ config }) => {
         return 'flex-col md:flex-row';
     }
   };
+  
+  // Build background styles properly to avoid conflicts
+  const backgroundStyles = useMemo(() => {
+    const styles = {};
+    const isGradient = typeof bgColor === 'string' && bgColor.includes('gradient');
+    
+    if (isGradient) {
+      // For gradients, combine with texture using comma-separated backgrounds
+      if (bgTexture) {
+        styles.backgroundImage = `${bgTexture}, ${bgColor}`;
+      } else {
+        styles.backgroundImage = bgColor;
+      }
+    } else {
+      // For solid colors, use backgroundColor and backgroundImage separately
+      styles.backgroundColor = bgColor;
+      if (bgTexture) {
+        styles.backgroundImage = bgTexture;
+      }
+    }
+    
+    styles.backgroundSize = config.backgroundTexture === 'dots' || config.backgroundTexture === 'grid' 
+      ? '20px 20px' 
+      : 'auto';
+    
+    return styles;
+  }, [bgColor, bgTexture, config.backgroundTexture]);
 
   return (
     <div
       className="h-full w-full p-6"
       style={{
-        background: bgColor,
-        backgroundImage: bgTexture ? `${bgTexture}` : undefined,
-        backgroundSize: config.backgroundTexture === 'dots' ? '20px 20px' : config.backgroundTexture === 'grid' ? '20px 20px' : 'auto',
+        ...backgroundStyles,
         color: textColor,
         fontFamily: fontFamily,
         textAlign: config.textAlign,
@@ -794,11 +819,24 @@ export const WeatherWidget = ({ config }) => {
           {/* Error Display */}
           {error && (
             <div 
-              className="mt-4 p-3 bg-red-100 text-red-800 rounded-lg text-sm"
+              className="mt-4 p-3 bg-red-100 text-red-800 rounded-lg text-sm flex items-center justify-between"
               role="alert"
               aria-live="assertive"
             >
-              {error}
+              <span>{error}</span>
+              <button
+                onClick={() => {
+                  if (config.useGeolocation) {
+                    detectLocation();
+                  } else {
+                    fetchWeatherData(currentLocation);
+                  }
+                }}
+                className="ml-3 px-3 py-1 bg-red-200 hover:bg-red-300 rounded text-red-800 text-xs font-medium transition-colors"
+                aria-label="Retry fetching weather data"
+              >
+                Retry
+              </button>
             </div>
           )}
 

@@ -1,25 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 export const ImageGalleryWidget = ({ config }) => {
-  const images = config.images.filter(Boolean); // Ensure no empty strings
+  const images = (config.images || []).filter(Boolean); // Ensure no empty strings
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isDark, setIsDark] = useState(false);
+  const [systemPrefersDark, setSystemPrefersDark] = useState(() => 
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
   const [imageError, setImageError] = useState(false);
 
-  // Handle dark/light mode
+  // Subscribe to system preference changes
   useEffect(() => {
-    if (config.appearanceMode === 'system') {
-      const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      setIsDark(mq.matches);
-      const handler = (e) => setIsDark(e.matches);
-      mq.addEventListener('change', handler);
-      return () => mq.removeEventListener('change', handler);
-    } else if (config.appearanceMode === 'dark') {
-      setIsDark(true);
-    } else {
-      setIsDark(false);
-    }
-  }, [config.appearanceMode]);
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e) => setSystemPrefersDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  // Derive isDark from config and system preference
+  const isDark = useMemo(() => {
+    if (config.appearanceMode === 'dark') return true;
+    if (config.appearanceMode === 'light') return false;
+    // system mode
+    return systemPrefersDark;
+  }, [config.appearanceMode, systemPrefersDark]);
 
   // Handle autoplay
   useEffect(() => {

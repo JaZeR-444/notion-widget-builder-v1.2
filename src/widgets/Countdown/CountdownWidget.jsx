@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 // JAZER_BRAND constants
 const JAZER_BRAND = {
@@ -35,9 +35,54 @@ const escapeHTML = (str) => {
   return str.replace(/[&<>"']/g, (char) => map[char]);
 };
 
+// Helper function to calculate time units
+const calculateUnits = (milliseconds, isPast) => {
+  const seconds = Math.floor(milliseconds / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  const weeks = Math.floor(days / 7);
+  const months = Math.floor(days / 30.44); // Average month
+  const years = Math.floor(days / 365.25); // Average year
+
+  return {
+    finished: false,
+    isPast,
+    years,
+    months: months % 12,
+    weeks: weeks % 4,
+    days: days % 7,
+    hours: hours % 24,
+    minutes: minutes % 60,
+    seconds: seconds % 60
+  };
+};
+
+// Helper function to calculate time remaining
+const calculateTimeLeft = (targetDate, stopAtZero) => {
+  const now = new Date();
+  const target = new Date(targetDate);
+  const diff = target - now;
+
+  if (diff <= 0) {
+    if (stopAtZero) {
+      return { finished: true, isPast: false };
+    } else {
+      // Continue counting into negative
+      return calculateUnits(Math.abs(diff), true);
+    }
+  }
+
+  return calculateUnits(diff, false);
+};
+
 export const CountdownWidget = ({ config }) => {
-  const [timeLeft, setTimeLeft] = useState({});
-  const [isDark, setIsDark] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(() => 
+    calculateTimeLeft(config.targetDate, config.stopAtZero)
+  );
+  const [systemPrefersDark, setSystemPrefersDark] = useState(() => 
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
   const [showConfetti, setShowConfetti] = useState(false);
   const [confettiStartTime, setConfettiStartTime] = useState(null);
   const [confettiParticles] = useState(() =>
@@ -48,70 +93,36 @@ export const CountdownWidget = ({ config }) => {
     }))
   );
 
-  // Detect theme
+  // Subscribe to system preference changes
   useEffect(() => {
-    if (config.appearance === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      setIsDark(mediaQuery.matches);
-      const handler = (e) => setIsDark(e.matches);
-      mediaQuery.addEventListener('change', handler);
-      return () => mediaQuery.removeEventListener('change', handler);
-    } else {
-      setIsDark(config.appearance === 'dark');
-    }
-  }, [config.appearance]);
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e) => setSystemPrefersDark(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
 
-  // Calculate time remaining
+  // Derive isDark from config and system preference
+  const isDark = useMemo(() => {
+    if (config.appearance === 'dark') return true;
+    if (config.appearance === 'light') return false;
+    // system mode
+    return systemPrefersDark;
+  }, [config.appearance, systemPrefersDark]);
+
+  // Calculate time remaining - use interval for updates
   useEffect(() => {
-    const calculate = () => {
-      const now = new Date();
-      const target = new Date(config.targetDate);
-      const diff = target - now;
-
-      if (diff <= 0) {
-        if (config.stopAtZero) {
-          // Show completion state
-          if (!showConfetti && config.confettiDuration !== 'never') {
-            setShowConfetti(true);
-            setConfettiStartTime(Date.now());
-          }
-          return { finished: true, isPast: false };
-        } else {
-          // Continue counting into negative
-          return calculateUnits(Math.abs(diff), true);
-        }
-      }
-
-      return calculateUnits(diff, false);
-    };
-
-    const calculateUnits = (milliseconds, isPast) => {
-      const seconds = Math.floor(milliseconds / 1000);
-      const minutes = Math.floor(seconds / 60);
-      const hours = Math.floor(minutes / 60);
-      const days = Math.floor(hours / 24);
-      const weeks = Math.floor(days / 7);
-      const months = Math.floor(days / 30.44); // Average month
-      const years = Math.floor(days / 365.25); // Average year
-
-      return {
-        finished: false,
-        isPast,
-        years,
-        months: months % 12,
-        weeks: weeks % 4,
-        days: days % 7,
-        hours: hours % 24,
-        minutes: minutes % 60,
-        seconds: seconds % 60
-      };
-    };
-
     const timer = setInterval(() => {
-      setTimeLeft(calculate());
+      const newTimeLeft = calculateTimeLeft(config.targetDate, config.stopAtZero);
+      
+      // Handle confetti trigger when countdown finishes
+      if (newTimeLeft.finished && !showConfetti && config.confettiDuration !== 'never') {
+        setShowConfetti(true);
+        setConfettiStartTime(Date.now());
+      }
+      
+      setTimeLeft(newTimeLeft);
     }, 1000);
 
-    setTimeLeft(calculate());
     return () => clearInterval(timer);
   }, [config.targetDate, config.stopAtZero, showConfetti, config.confettiDuration]);
 
@@ -138,8 +149,15 @@ export const CountdownWidget = ({ config }) => {
     return () => clearTimeout(timeout);
   }, [showConfetti, confettiStartTime, config.confettiDuration]);
 
-  // Get active colors
-  const colors = isDark ? config.darkMode : config.lightMode;
+  // Get active colors with fallback defaults (memoized)
+  const colors = useMemo(() => {
+    const defaultColors = {
+      textColor: isDark ? '#F8F9FF' : '#0B0E12',
+      panelColor: isDark ? '#1F2937' : '#F8F9FF',
+      digitColor: isDark ? '#F8F9FF' : '#0B0E12'
+    };
+    return (isDark ? config.darkMode : config.lightMode) || defaultColors;
+  }, [isDark, config.darkMode, config.lightMode]);
 
   // Font mapping
   const getFontFamily = (fontType) => {

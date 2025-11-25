@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { generateBrandPresets } from '../../utils/brandThemeGenerator';
 
 // JAZER_BRAND constants
@@ -345,14 +345,9 @@ const AnalogClock = ({ time, size, type, colors, config }) => {
 
 export const ClockWidget = ({ config, brandTheme }) => {
   const [time, setTime] = useState(new Date());
-  const [isDark, setIsDark] = useState(() => {
-    if (config.appearance === 'dark') return true;
-    if (config.appearance === 'light') return false;
-    if (config.appearance === 'system') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    return false;
-  });
+  const [systemPrefersDark, setSystemPrefersDark] = useState(() => 
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
 
   // Timer state
   const [timerMinutes, setTimerMinutes] = useState(5);
@@ -362,6 +357,22 @@ export const ClockWidget = ({ config, brandTheme }) => {
   // Stopwatch state
   const [stopwatchTime, setStopwatchTime] = useState(0);
   const [stopwatchRunning, setStopwatchRunning] = useState(false);
+
+  // Subscribe to system preference changes
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e) => setSystemPrefersDark(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
+
+  // Derive isDark from config and system preference
+  const isDark = useMemo(() => {
+    if (config.appearance === 'dark') return true;
+    if (config.appearance === 'light') return false;
+    // system mode
+    return systemPrefersDark;
+  }, [config.appearance, systemPrefersDark]);
 
   // Add CSS for blinking separator animation
   useEffect(() => {
@@ -477,18 +488,6 @@ export const ClockWidget = ({ config, brandTheme }) => {
       return () => clearInterval(interval);
     }
   }, [config.clockType]);
-
-  // Listen for system dark mode changes
-  useEffect(() => {
-    if (config.appearance === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handler = (e) => setIsDark(e.matches);
-      mediaQuery.addEventListener('change', handler);
-      return () => mediaQuery.removeEventListener('change', handler);
-    } else {
-      setIsDark(config.appearance === 'dark');
-    }
-  }, [config.appearance]);
 
   // Generate brand-based presets if brand theme is available
   const brandPresets = React.useMemo(() => {
