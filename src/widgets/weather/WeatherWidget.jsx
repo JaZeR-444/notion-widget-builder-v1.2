@@ -361,6 +361,20 @@ export const WeatherWidget = ({ config }) => {
     return () => clearInterval(interval);
   }, [currentLocation, config.useGeolocation]);
 
+  // Load Google Font if selected
+  useEffect(() => {
+    if (config.googleFont !== 'none') {
+      const link = document.createElement('link');
+      link.href = `https://fonts.googleapis.com/css2?family=${config.googleFont}&display=swap`;
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+
+      return () => {
+        document.head.removeChild(link);
+      };
+    }
+  }, [config.googleFont]);
+
   // Listen for system dark mode changes
   useEffect(() => {
     if (config.appearanceMode === 'system') {
@@ -378,10 +392,100 @@ export const WeatherWidget = ({ config }) => {
   // Get colors based on appearance mode
   const textColor = isDark ? config.textColorDark : config.textColorLight;
   
+  // Get font family based on config
+  const getFontFamily = () => {
+    if (config.googleFont !== 'none') {
+      return `"${config.googleFont.replace(/\+/g, ' ')}", system-ui, sans-serif`;
+    }
+    
+    switch (config.textFontFamily) {
+      case 'serif':
+        return 'Georgia, serif';
+      case 'mono':
+        return 'ui-monospace, monospace';
+      default:
+        return JAZER_BRAND.fonts.body;
+    }
+  };
+
+  // Get background texture pattern
+  const getBackgroundTexture = () => {
+    if (config.backgroundTexture === 'none') return '';
+    
+    const textures = {
+      noise: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="300"%3E%3Cfilter id="n"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" /%3E%3C/filter%3E%3Crect width="300" height="300" filter="url(%23n)" opacity="0.05"/%3E%3C/svg%3E',
+      stars: 'radial-gradient(2px 2px at 20px 30px, white, transparent), radial-gradient(2px 2px at 60px 70px, white, transparent), radial-gradient(1px 1px at 50px 50px, white, transparent), radial-gradient(1px 1px at 130px 80px, white, transparent), radial-gradient(2px 2px at 90px 10px, white, transparent)',
+      dots: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)',
+      grid: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)',
+      waves: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.03) 10px, rgba(255,255,255,0.03) 20px)'
+    };
+    
+    return textures[config.backgroundTexture] || '';
+  };
+
+  // Apply preset themes
+  const getPresetThemeStyles = () => {
+    if (config.presetTheme === 'none') return {};
+    
+    const themes = {
+      cyberpunk: {
+        primary: JAZER_BRAND.colors.neonPink,
+        secondary: JAZER_BRAND.colors.electricPurple,
+        gradient: `linear-gradient(135deg, ${JAZER_BRAND.colors.neonPink}, ${JAZER_BRAND.colors.electricPurple})`,
+        glow: '0 0 20px rgba(236, 72, 153, 0.5)'
+      },
+      stealth: {
+        primary: JAZER_BRAND.colors.graphite,
+        secondary: JAZER_BRAND.colors.nightBlack,
+        gradient: `linear-gradient(135deg, ${JAZER_BRAND.colors.graphite}, ${JAZER_BRAND.colors.nightBlack})`,
+        glow: 'none'
+      },
+      ocean: {
+        primary: JAZER_BRAND.colors.aetherTeal,
+        secondary: JAZER_BRAND.colors.cosmicBlue,
+        gradient: `linear-gradient(135deg, ${JAZER_BRAND.colors.aetherTeal}, ${JAZER_BRAND.colors.cosmicBlue})`,
+        glow: '0 0 15px rgba(6, 182, 212, 0.4)'
+      },
+      sunset: {
+        primary: JAZER_BRAND.colors.sunburstGold,
+        secondary: JAZER_BRAND.colors.neonPink,
+        gradient: `linear-gradient(135deg, ${JAZER_BRAND.colors.sunburstGold}, ${JAZER_BRAND.colors.neonPink})`,
+        glow: '0 0 20px rgba(245, 158, 11, 0.5)'
+      },
+      forest: {
+        primary: '#10b981',
+        secondary: '#059669',
+        gradient: 'linear-gradient(135deg, #10b981, #059669)',
+        glow: '0 0 15px rgba(16, 185, 129, 0.4)'
+      },
+      neon: {
+        primary: JAZER_BRAND.colors.ultraviolet,
+        secondary: JAZER_BRAND.colors.neonPink,
+        gradient: JAZER_BRAND.gradient,
+        glow: JAZER_BRAND.glow
+      },
+      midnight: {
+        primary: JAZER_BRAND.colors.nightBlack,
+        secondary: JAZER_BRAND.colors.ultraviolet,
+        gradient: `linear-gradient(135deg, ${JAZER_BRAND.colors.nightBlack}, ${JAZER_BRAND.colors.ultraviolet})`,
+        glow: '0 0 10px rgba(167, 139, 250, 0.3)'
+      }
+    };
+    
+    return themes[config.presetTheme] || {};
+  };
+
+  const presetTheme = getPresetThemeStyles();
+  
   // Dynamic gradient backgrounds based on weather condition
   const getWeatherGradient = () => {
     if (config.useTransparentBackground) return 'transparent';
     if (config.setBackgroundColor && !weatherData) return config.backgroundColor;
+    
+    // Apply preset theme if selected
+    if (config.presetTheme !== 'none' && presetTheme.gradient) {
+      return presetTheme.gradient;
+    }
     
     const condition = weatherData?.current?.icon || 'clear';
     const gradients = {
@@ -404,6 +508,7 @@ export const WeatherWidget = ({ config }) => {
   };
   
   const bgColor = getWeatherGradient();
+  const bgTexture = getBackgroundTexture();
   
   // Glassmorphism styles for transparent background
   const glassmorphismStyles = config.useTransparentBackground ? {
@@ -415,6 +520,13 @@ export const WeatherWidget = ({ config }) => {
   } : {};
 
   const textShadow = config.textShadows ? '0 2px 4px rgba(0,0,0,0.1)' : 'none';
+  const glowEffect = config.glowEffect ? (presetTheme.glow || JAZER_BRAND.glow) : 'none';
+  const gradientTextStyle = config.gradientText ? {
+    background: presetTheme.gradient || JAZER_BRAND.gradient,
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text'
+  } : {};
 
   // Convert temperature based on units (API already returns in correct units)
   const convertTemp = (temp) => Math.round(temp);
@@ -486,8 +598,12 @@ export const WeatherWidget = ({ config }) => {
       className="h-full w-full p-6"
       style={{
         background: bgColor,
+        backgroundImage: bgTexture ? `${bgTexture}` : undefined,
+        backgroundSize: config.backgroundTexture === 'dots' ? '20px 20px' : config.backgroundTexture === 'grid' ? '20px 20px' : 'auto',
         color: textColor,
-        fontFamily: JAZER_BRAND.fonts.body,
+        fontFamily: getFontFamily(),
+        textAlign: config.textAlign,
+        boxShadow: glowEffect,
         ...glassmorphismStyles
       }}
     >
@@ -515,7 +631,12 @@ export const WeatherWidget = ({ config }) => {
                   size={48 * config.fontScale}
                 />
                 <div>
-                  <h2 className="text-xl font-bold" style={{ fontFamily: JAZER_BRAND.fonts.heading, textShadow, fontSize: `${20 * config.fontScale}px` }}>
+                  <h2 className="text-xl font-bold" style={{ 
+                    fontFamily: JAZER_BRAND.fonts.heading, 
+                    textShadow, 
+                    fontSize: `${20 * config.fontScale}px`,
+                    ...gradientTextStyle
+                  }}>
                     {currentLocation}
                   </h2>
                   {config.useGeolocation && (

@@ -56,10 +56,86 @@ export const generateWeatherHTML = (config) => {
   const isDark = config.appearanceMode === 'dark';
   const textColor = isDark ? config.textColorDark : config.textColorLight;
   
+  // Get font family based on config
+  const getFontFamily = () => {
+    if (config.googleFont !== 'none') {
+      return `"${config.googleFont.replace(/\+/g, ' ')}", system-ui, sans-serif`;
+    }
+    
+    switch (config.textFontFamily) {
+      case 'serif':
+        return 'Georgia, serif';
+      case 'mono':
+        return 'ui-monospace, monospace';
+      default:
+        return JAZER_BRAND.fonts.body;
+    }
+  };
+
+  // Get background texture pattern
+  const getBackgroundTexture = () => {
+    if (config.backgroundTexture === 'none') return '';
+    
+    const textures = {
+      noise: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="300"%3E%3Cfilter id="n"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" /%3E%3C/filter%3E%3Crect width="300" height="300" filter="url(%23n)" opacity="0.05"/%3E%3C/svg%3E',
+      stars: 'radial-gradient(2px 2px at 20px 30px, white, transparent), radial-gradient(2px 2px at 60px 70px, white, transparent), radial-gradient(1px 1px at 50px 50px, white, transparent), radial-gradient(1px 1px at 130px 80px, white, transparent), radial-gradient(2px 2px at 90px 10px, white, transparent)',
+      dots: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)',
+      grid: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)',
+      waves: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.03) 10px, rgba(255,255,255,0.03) 20px)'
+    };
+    
+    return textures[config.backgroundTexture] || '';
+  };
+
+  // Apply preset themes
+  const getPresetThemeStyles = () => {
+    if (config.presetTheme === 'none') return {};
+    
+    const themes = {
+      cyberpunk: {
+        gradient: `linear-gradient(135deg, ${JAZER_BRAND.colors.neonPink}, ${JAZER_BRAND.colors.electricPurple})`,
+        glow: '0 0 20px rgba(236, 72, 153, 0.5)'
+      },
+      stealth: {
+        gradient: `linear-gradient(135deg, ${JAZER_BRAND.colors.graphite}, ${JAZER_BRAND.colors.nightBlack})`,
+        glow: 'none'
+      },
+      ocean: {
+        gradient: `linear-gradient(135deg, ${JAZER_BRAND.colors.aetherTeal}, ${JAZER_BRAND.colors.cosmicBlue})`,
+        glow: '0 0 15px rgba(6, 182, 212, 0.4)'
+      },
+      sunset: {
+        gradient: `linear-gradient(135deg, ${JAZER_BRAND.colors.sunburstGold}, ${JAZER_BRAND.colors.neonPink})`,
+        glow: '0 0 20px rgba(245, 158, 11, 0.5)'
+      },
+      forest: {
+        gradient: 'linear-gradient(135deg, #10b981, #059669)',
+        glow: '0 0 15px rgba(16, 185, 129, 0.4)'
+      },
+      neon: {
+        gradient: `linear-gradient(90deg, ${JAZER_BRAND.colors.neonPink} 0%, ${JAZER_BRAND.colors.sunburstGold} 28%, ${JAZER_BRAND.colors.aetherTeal} 50%, ${JAZER_BRAND.colors.cosmicBlue} 74%, ${JAZER_BRAND.colors.electricPurple} 100%)`,
+        glow: '0 0 4px rgba(139, 92, 246, 0.5)'
+      },
+      midnight: {
+        gradient: `linear-gradient(135deg, ${JAZER_BRAND.colors.nightBlack}, ${JAZER_BRAND.colors.ultraviolet})`,
+        glow: '0 0 10px rgba(167, 139, 250, 0.3)'
+      }
+    };
+    
+    return themes[config.presetTheme] || {};
+  };
+
+  const presetTheme = getPresetThemeStyles();
+  
   // Dynamic gradient backgrounds based on weather condition
   const getWeatherGradient = (condition = 'clear') => {
     if (config.useTransparentBackground) return 'transparent';
     if (config.setBackgroundColor) return config.backgroundColor;
+    
+    // Apply preset theme if selected
+    if (config.presetTheme !== 'none' && presetTheme.gradient) {
+      return presetTheme.gradient;
+    }
     
     const gradients = {
       clear: `linear-gradient(135deg, ${JAZER_BRAND.colors.sunburstGold} 0%, ${JAZER_BRAND.colors.cosmicBlue} 100%)`,
@@ -74,10 +150,26 @@ export const generateWeatherHTML = (config) => {
   };
   
   const bgColor = getWeatherGradient();
+  const bgTexture = getBackgroundTexture();
+  const bgTextureSize = config.backgroundTexture === 'dots' || config.backgroundTexture === 'grid' ? '20px 20px' : 'auto';
   const textShadow = config.textShadows ? '0 2px 4px rgba(0,0,0,0.1)' : 'none';
+  const glowEffect = config.glowEffect ? (presetTheme.glow || '0 0 4px rgba(139, 92, 246, 0.5)') : 'none';
+  const gradientText = config.gradientText ? `
+    background: ${presetTheme.gradient || `linear-gradient(90deg, ${JAZER_BRAND.colors.neonPink} 0%, ${JAZER_BRAND.colors.sunburstGold} 28%, ${JAZER_BRAND.colors.aetherTeal} 50%, ${JAZER_BRAND.colors.cosmicBlue} 74%, ${JAZER_BRAND.colors.electricPurple} 100%)`};
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  ` : '';
+  const fontFamily = getFontFamily();
+  const textAlign = config.textAlign || 'center';
   const tempUnit = config.preferredUnits === 'metric' ? '°C' : '°F';
   const windUnit = config.preferredUnits === 'metric' ? 'km/h' : 'mph';
   const fontScale = config.fontScale || 1.0;
+  
+  // Google Font URL
+  const googleFontUrl = config.googleFont !== 'none' 
+    ? `https://fonts.googleapis.com/css2?family=${config.googleFont}&display=swap`
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -88,6 +180,7 @@ export const generateWeatherHTML = (config) => {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  ${googleFontUrl ? `<link href="${googleFontUrl}" rel="stylesheet">` : ''}
   <style>
     * {
       margin: 0;
@@ -99,13 +192,21 @@ export const generateWeatherHTML = (config) => {
       width: 100vw;
       height: 100vh;
       background: ${bgColor};
+      ${bgTexture ? `background-image: ${bgTexture};` : ''}
+      ${bgTexture ? `background-size: ${bgTextureSize};` : ''}
       color: ${textColor};
-      font-family: ${JAZER_BRAND.fonts.body};
+      font-family: ${fontFamily};
+      text-align: ${textAlign};
       padding: 24px;
+      ${glowEffect !== 'none' ? `box-shadow: ${glowEffect};` : ''}
       ${config.useTransparentBackground ? `
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
       ` : ''}
+    }
+
+    h2 {
+      ${gradientText}
     }
 
     .weather-container {

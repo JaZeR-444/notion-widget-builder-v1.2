@@ -53,12 +53,39 @@ export const weatherConfig = {
     textColorDark: JAZER_BRAND.colors.stardustWhite,
     appearanceMode: 'system', // 'do-nothing' | 'system' | 'light' | 'dark'
 
+    // Light Mode Colors (universal styling)
+    lightMode: {
+      textColor: JAZER_BRAND.colors.graphite,
+      backgroundColor: JAZER_BRAND.colors.stardustWhite
+    },
+
+    // Dark Mode Colors (universal styling)
+    darkMode: {
+      textColor: JAZER_BRAND.colors.stardustWhite,
+      backgroundColor: JAZER_BRAND.colors.nightBlack
+    },
+
     // Additional Features
     visuallyGroupForecast: false,
     showHoverMenu: true,
     showCustomizeButton: true,
     timeFormat: '12h', // '12h' | '24h'
-    showSevereAlerts: true
+    showSevereAlerts: true,
+
+    // Typography (universal styling)
+    textFontFamily: 'default', // default, serif, mono
+    googleFont: 'none', // none, orbitron, righteousretro, caveat, permanentmarker, monoton
+    textAlign: 'center', // left, center, right
+
+    // Background (universal styling)
+    backgroundTexture: 'none', // none, noise, stars, dots, grid, waves
+
+    // Preset Theme (universal styling)
+    presetTheme: 'none', // none, cyberpunk, stealth, ocean, sunset, forest, neon
+
+    // Effects (universal styling)
+    glowEffect: false,
+    gradientText: false
   },
 
   fields: [
@@ -231,6 +258,46 @@ export const weatherConfig = {
       ]
     },
 
+    // Light Mode Colors (universal styling)
+    {
+      name: 'lightMode',
+      label: 'Light Mode Settings',
+      type: 'group',
+      section: 'appearance',
+      fields: [
+        {
+          name: 'textColor',
+          label: 'Text Color',
+          type: 'color'
+        },
+        {
+          name: 'backgroundColor',
+          label: 'Background Color',
+          type: 'color'
+        }
+      ]
+    },
+
+    // Dark Mode Colors (universal styling)
+    {
+      name: 'darkMode',
+      label: 'Dark Mode Settings',
+      type: 'group',
+      section: 'appearance',
+      fields: [
+        {
+          name: 'textColor',
+          label: 'Text Color',
+          type: 'color'
+        },
+        {
+          name: 'backgroundColor',
+          label: 'Background Color',
+          type: 'color'
+        }
+      ]
+    },
+
     // Additional Features Section
     {
       name: 'visuallyGroupForecast',
@@ -265,6 +332,93 @@ export const weatherConfig = {
       label: 'Show Customize Button',
       type: 'boolean',
       section: 'features'
+    },
+
+    // Typography Section (universal styling)
+    {
+      name: 'textFontFamily',
+      label: 'Text Font',
+      type: 'select',
+      section: 'typography',
+      options: [
+        { label: 'Default', value: 'default' },
+        { label: 'Serif', value: 'serif' },
+        { label: 'Mono', value: 'mono' }
+      ]
+    },
+    {
+      name: 'googleFont',
+      label: 'Google Font Style',
+      type: 'select',
+      section: 'typography',
+      options: [
+        { label: 'None (Default)', value: 'none' },
+        { label: 'Orbitron (Futuristic)', value: 'Orbitron' },
+        { label: 'Righteous (Retro)', value: 'Righteous' },
+        { label: 'Caveat (Handwritten)', value: 'Caveat' },
+        { label: 'Permanent Marker (Bold)', value: 'Permanent+Marker' },
+        { label: 'Monoton (Art Deco)', value: 'Monoton' },
+        { label: 'Press Start 2P (Pixel)', value: 'Press+Start+2P' }
+      ]
+    },
+    {
+      name: 'textAlign',
+      label: 'Text Alignment',
+      type: 'select',
+      section: 'typography',
+      options: [
+        { label: 'Left', value: 'left' },
+        { label: 'Center', value: 'center' },
+        { label: 'Right', value: 'right' }
+      ]
+    },
+
+    // Background Texture (universal styling)
+    {
+      name: 'backgroundTexture',
+      label: 'Background Texture',
+      type: 'select',
+      section: 'background',
+      options: [
+        { label: 'None', value: 'none' },
+        { label: 'Noise', value: 'noise' },
+        { label: 'Stars', value: 'stars' },
+        { label: 'Dots Pattern', value: 'dots' },
+        { label: 'Grid', value: 'grid' },
+        { label: 'Waves', value: 'waves' }
+      ]
+    },
+
+    // Preset Theme (universal styling)
+    {
+      name: 'presetTheme',
+      label: 'Preset Theme',
+      type: 'select',
+      section: 'theme',
+      options: [
+        { label: 'None (Custom)', value: 'none' },
+        { label: 'Cyberpunk', value: 'cyberpunk' },
+        { label: 'Stealth', value: 'stealth' },
+        { label: 'Ocean', value: 'ocean' },
+        { label: 'Sunset', value: 'sunset' },
+        { label: 'Forest', value: 'forest' },
+        { label: 'Neon', value: 'neon' },
+        { label: 'Midnight', value: 'midnight' }
+      ]
+    },
+
+    // Effects (universal styling)
+    {
+      name: 'glowEffect',
+      label: 'Neon Glow Effect',
+      type: 'boolean',
+      section: 'effects'
+    },
+    {
+      name: 'gradientText',
+      label: 'Gradient Text',
+      type: 'boolean',
+      section: 'effects'
     }
   ]
 };
