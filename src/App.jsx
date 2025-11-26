@@ -45,6 +45,8 @@ import { generateCountdownHTML, generateCountdownScript } from './widgets/Countd
 import { newButtonGenerator } from './widgets/newButtonGenerator/ButtonGeneratorWidget'; // Named import
 
 import BrandLogoUploader from './components/BrandLogoUploader';
+import BrandThemeGenerator from './components/BrandThemeGenerator';
+import BrandThemeGenerator from './components/BrandThemeGenerator';
 
 // --- CONSTANTS & CONFIG ---
 
@@ -1257,7 +1259,156 @@ const ExportModal = ({ isOpen, onClose, widgetDef, config }) => {
 
 // --- FILE: WidgetLandingPage.jsx ---
 
-function WidgetLandingPage({ onSelect }) {
+// Resizable Preview Panel Component
+const ResizablePreviewPanel = ({ 
+  activeBrandId, 
+  config, 
+  activeWidgetId, 
+  debouncedConfig, 
+  handleConfigChange, 
+  brandTheme, 
+  ActiveWidget,
+  showExport,
+  setShowExport 
+}) => {
+  const [previewWidth, setPreviewWidth] = useState(800);
+  const [previewHeight, setPreviewHeight] = useState(450);
+  const [isResizing, setIsResizing] = useState(false);
+  const previewContainerRef = useRef(null);
+
+  const startResize = (direction, e) => {
+    e.preventDefault();
+    setIsResizing(direction);
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing || !previewContainerRef.current) return;
+      
+      const container = previewContainerRef.current.getBoundingClientRect();
+      
+      if (isResizing === 'horizontal' || isResizing === 'both') {
+        const newWidth = Math.max(300, Math.min(1600, e.clientX - container.left - 40));
+        setPreviewWidth(newWidth);
+      }
+      
+      if (isResizing === 'vertical' || isResizing === 'both') {
+        const newHeight = Math.max(200, Math.min(1000, e.clientY - container.top - 40));
+        setPreviewHeight(newHeight);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
+  return (
+    <div 
+      ref={previewContainerRef}
+      className="flex-1 flex flex-col relative h-full" 
+      style={{ backgroundColor: 'var(--jazer-night-black)' }}
+    >
+      <div className="flex-1 flex items-center justify-center p-8" style={{
+        background: activeBrandId === 'jazer' ? `radial-gradient(circle at 50% 10%, ${JAZER_BRAND.ui.nebulaPurple} 0%, ${JAZER_BRAND.colors.nightBlack} 100%)` : '#f5f5f5',
+        boxShadow: activeBrandId === 'jazer' ? JAZER_BRAND.glow : 'none'
+      }}>
+        <div 
+          className="shadow-2xl rounded-xl overflow-hidden relative group"
+          style={{ 
+            width: `${previewWidth}px`,
+            height: `${previewHeight}px`,
+            backgroundColor: config.bgColor, 
+            border: '2px solid var(--jazer-cosmic-blue)', 
+            boxShadow: 'var(--jazer-glow-blue), 0 20px 40px rgba(0,0,0,0.4)',
+            transition: isResizing ? 'none' : 'all 0.2s ease'
+          }}
+        >
+          <WidgetErrorBoundary key={activeWidgetId}>
+            <ActiveWidget.Component
+              config={debouncedConfig}
+              onConfigChange={handleConfigChange}
+              brand={JAZER_BRAND}
+              brandTheme={brandTheme}
+            />
+          </WidgetErrorBoundary>
+          
+          {/* Resize Handles */}
+          {/* Right handle */}
+          <div
+            onMouseDown={(e) => startResize('horizontal', e)}
+            className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity"
+            style={{
+              background: 'linear-gradient(90deg, transparent, var(--jazer-electric-purple))',
+            }}
+          >
+            <div 
+              className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-12 rounded-l"
+              style={{ backgroundColor: 'var(--jazer-electric-purple)', boxShadow: 'var(--jazer-glow-purple)' }}
+            />
+          </div>
+          
+          {/* Bottom handle */}
+          <div
+            onMouseDown={(e) => startResize('vertical', e)}
+            className="absolute left-0 right-0 bottom-0 h-2 cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity"
+            style={{
+              background: 'linear-gradient(180deg, transparent, var(--jazer-electric-purple))',
+            }}
+          >
+            <div 
+              className="absolute left-1/2 -translate-x-1/2 bottom-0 h-1 w-12 rounded-t"
+              style={{ backgroundColor: 'var(--jazer-electric-purple)', boxShadow: 'var(--jazer-glow-purple)' }}
+            />
+          </div>
+          
+          {/* Corner handle */}
+          <div
+            onMouseDown={(e) => startResize('both', e)}
+            className="absolute right-0 bottom-0 w-6 h-6 cursor-nwse-resize opacity-0 group-hover:opacity-100 transition-opacity"
+            style={{
+              background: 'var(--jazer-electric-purple)',
+              clipPath: 'polygon(100% 0, 100% 100%, 0 100%)',
+              boxShadow: 'var(--jazer-glow-purple)'
+            }}
+          />
+          
+          {/* Size indicator */}
+          <div 
+            className="absolute top-2 right-2 px-2 py-1 rounded text-xs font-mono opacity-0 group-hover:opacity-100 transition-opacity"
+            style={{
+              backgroundColor: 'rgba(139, 92, 246, 0.9)',
+              color: 'var(--jazer-stardust-white)',
+              backdropFilter: 'blur(10px)'
+            }}
+          >
+            {previewWidth} × {previewHeight}
+          </div>
+        </div>
+      </div>
+
+      {/* EXPORT MODAL */}
+      <ExportModal
+        isOpen={showExport}
+        onClose={() => setShowExport(false)}
+        widgetDef={ActiveWidget}
+        config={config}
+      />
+    </div>
+  );
+};
+
+function WidgetLandingPage({ onSelect, onBrandGenerator }) {
   return (
     <div className="min-h-screen p-8 md:p-16 flex flex-col items-center" style={{ backgroundColor: 'var(--jazer-night-black)', color: 'var(--jazer-stardust-white)' }}>
       <div className="max-w-6xl w-full space-y-12">
@@ -1302,6 +1453,48 @@ function WidgetLandingPage({ onSelect }) {
           ))}
         </div>
 
+        {/* Brand Theme Generator Card */}
+        <div className="mt-12 p-1 rounded-2xl transition-all duration-300 hover:-translate-y-2" style={{ background: 'linear-gradient(135deg, var(--jazer-electric-purple), var(--jazer-neon-pink))' }}>
+          <div className="rounded-xl p-8" style={{ backgroundColor: 'var(--jazer-graphite)' }}>
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-3 rounded-full" style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', border: '1px solid var(--jazer-electric-purple)' }}>
+                    <Sparkles className="w-6 h-6" style={{ color: 'var(--jazer-electric-purple)' }} />
+                  </div>
+                  <h3 className="text-2xl font-bold neon-text" style={{ fontFamily: 'Orbitron, sans-serif' }}>BRAND THEME GENERATOR</h3>
+                </div>
+                <p className="text-base leading-relaxed" style={{ color: 'var(--jazer-soft-slate)' }}>
+                  Upload your logo and automatically generate custom color presets for <strong style={{ color: 'var(--jazer-neon-pink)' }}>ALL widgets</strong>. Create a unified brand experience across your entire Notion workspace.
+                </p>
+                <div className="flex items-center gap-4 mt-4">
+                  <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--jazer-aether-teal)' }}>
+                    <Check className="w-4 h-4" />
+                    <span>8 Auto-Generated Presets</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--jazer-aether-teal)' }}>
+                    <Check className="w-4 h-4" />
+                    <span>Applies to All Widgets</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--jazer-aether-teal)' }}>
+                    <Check className="w-4 h-4" />
+                    <span>Save & Export</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={navigateToBrandGenerator}
+                className="px-8 py-4 rounded-lg font-bold text-lg flex items-center justify-center gap-3 transition-all btn-neon hover:scale-105 whitespace-nowrap"
+                style={{ backgroundColor: 'var(--jazer-electric-purple)', color: 'var(--jazer-stardust-white)' }}
+              >
+                <Sparkles className="w-5 h-5" />
+                Generate Theme
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
         <footer className="text-center pt-12 text-sm" style={{ color: 'var(--jazer-soft-slate)' }}>
           <p>© 2025 JaZeR. All rights reserved.</p>
         </footer>
@@ -1312,11 +1505,11 @@ function WidgetLandingPage({ onSelect }) {
 
 // --- FILE: NotionWidgetBuilder.jsx ---
 
-function NotionWidgetBuilder({ initialWidgetId, onBack }) {
+function NotionWidgetBuilder({ initialWidgetId, onBack, globalBrandTheme }) {
   const [activeWidgetId, setActiveWidgetId] = useState(initialWidgetId);
   const [activeBrandId, setActiveBrandId] = useState('none');
   const [config, setConfig] = useState(WIDGET_REGISTRY[initialWidgetId].defaultConfig);
-  const [brandTheme, setBrandTheme] = useState(null); // Store extracted brand colors
+  const [brandTheme, setBrandTheme] = useState(globalBrandTheme); // Store extracted brand colors
 
   // EXPORT STATES
   const [showExport, setShowExport] = useState(false);
@@ -1331,6 +1524,38 @@ function NotionWidgetBuilder({ initialWidgetId, onBack }) {
     document.head.appendChild(link);
     return () => document.head.removeChild(link);
   }, []);
+
+  // Update brandTheme when globalBrandTheme changes
+  useEffect(() => {
+    if (globalBrandTheme) {
+      setBrandTheme(globalBrandTheme);
+      // Optionally apply colors to current config
+      if (globalBrandTheme.primary) {
+        setConfig(prev => ({
+          ...prev,
+          bgColor: globalBrandTheme.background || prev.bgColor,
+          textColor: globalBrandTheme.text || prev.textColor,
+          accentColor: globalBrandTheme.primary || prev.accentColor
+        }));
+      }
+    }
+  }, [globalBrandTheme]);
+
+  // Update brandTheme when globalBrandTheme changes
+  useEffect(() => {
+    if (globalBrandTheme) {
+      setBrandTheme(globalBrandTheme);
+      // Optionally apply colors to current config
+      if (globalBrandTheme.primary) {
+        setConfig(prev => ({
+          ...prev,
+          bgColor: globalBrandTheme.background || prev.bgColor,
+          textColor: globalBrandTheme.text || prev.textColor,
+          accentColor: globalBrandTheme.primary || prev.accentColor
+        }));
+      }
+    }
+  }, [globalBrandTheme]);
 
   const applyBrandToConfig = (baseConfig, brandId) => {
     const brand = BRAND_KITS[brandId];
@@ -1456,31 +1681,17 @@ function NotionWidgetBuilder({ initialWidgetId, onBack }) {
       </div>
 
       {/* PREVIEW */}
-      <div className="flex-1 flex flex-col relative h-full" style={{ backgroundColor: 'var(--jazer-night-black)' }}>
-        <div className="flex-1 flex items-center justify-center p-8" style={{
-          background: activeBrandId === 'jazer' ? `radial-gradient(circle at 50% 10%, ${JAZER_BRAND.ui.nebulaPurple} 0%, ${JAZER_BRAND.colors.nightBlack} 100%)` : '#f5f5f5',
-          boxShadow: activeBrandId === 'jazer' ? JAZER_BRAND.glow : 'none'
-        }}>
-          <div className="w-full max-w-2xl aspect-video shadow-2xl rounded-xl overflow-hidden relative" style={{ backgroundColor: config.bgColor, border: '2px solid var(--jazer-cosmic-blue)', boxShadow: 'var(--jazer-glow-blue), 0 20px 40px rgba(0,0,0,0.4)' }}>
-            <WidgetErrorBoundary key={activeWidgetId}>
-              <ActiveWidget.Component
-                config={debouncedConfig}
-                onConfigChange={handleConfigChange}
-                brand={JAZER_BRAND}
-                brandTheme={brandTheme}
-              />
-            </WidgetErrorBoundary>
-          </div>
-        </div>
-
-        {/* EXPORT MODAL */}
-        <ExportModal
-          isOpen={showExport}
-          onClose={() => setShowExport(false)}
-          widgetDef={ActiveWidget}
-          config={config}
-        />
-      </div>
+      <ResizablePreviewPanel
+        activeBrandId={activeBrandId}
+        config={config}
+        activeWidgetId={activeWidgetId}
+        debouncedConfig={debouncedConfig}
+        handleConfigChange={handleConfigChange}
+        brandTheme={brandTheme}
+        ActiveWidget={ActiveWidget}
+        showExport={showExport}
+        setShowExport={setShowExport}
+      />
 
       {/* CONFIG */}
       <div className="w-full md:w-80 h-full flex flex-col" style={{ backgroundColor: 'var(--jazer-graphite)', borderLeft: '1px solid var(--jazer-soft-slate)' }}>
@@ -1521,48 +1732,46 @@ function NotionWidgetBuilder({ initialWidgetId, onBack }) {
               // Apply extracted colors to widget configuration
               const newConfig = { ...config };
 
-              // Map colors based on widget type
+              // ===== WIDGETS WITH LIGHTMODE/DARKMODE OBJECTS =====
               if (activeWidgetId === 'clock') {
                 newConfig.lightMode = {
                   ...newConfig.lightMode,
                   textColor: theme.text,
                   panelColor: theme.background,
-                  digitColor: theme.primary
+                  digitColor: theme.primary,
+                  clockColor: theme.primary,
+                  backgroundColor: theme.background
                 };
                 newConfig.darkMode = {
                   ...newConfig.darkMode,
                   textColor: theme.background,
                   panelColor: theme.text,
-                  digitColor: theme.secondary
+                  digitColor: theme.secondary,
+                  clockColor: theme.accent,
+                  backgroundColor: theme.text
                 };
-              } else if (activeWidgetId === 'countdown') {
+                newConfig.bgColor = theme.background;
+              } 
+              
+              else if (activeWidgetId === 'countdown') {
                 newConfig.lightMode = {
                   ...newConfig.lightMode,
                   textColor: theme.text,
                   panelColor: theme.background,
-                  digitColor: theme.primary
+                  digitColor: theme.primary,
+                  backgroundColor: theme.background
                 };
                 newConfig.darkMode = {
                   ...newConfig.darkMode,
                   textColor: theme.background,
                   panelColor: theme.text,
-                  digitColor: theme.secondary
+                  digitColor: theme.secondary,
+                  backgroundColor: theme.text
                 };
-              } else if (activeWidgetId === 'counter') {
-                newConfig.lightTextColor = theme.text;
-                newConfig.darkTextColor = theme.background;
                 newConfig.bgColor = theme.background;
-              } else if (activeWidgetId === 'newButtonGenerator') {
-                // Apply to all buttons
-                if (newConfig.buttons && Array.isArray(newConfig.buttons)) {
-                  newConfig.buttons = newConfig.buttons.map((btn, idx) => ({
-                    ...btn,
-                    bgColor: theme.palette[idx % theme.palette.length] || theme.primary,
-                    textColor: theme.background,
-                    outlineColor: theme.accent
-                  }));
-                }
-              } else if (activeWidgetId === 'quotes') {
+              } 
+              
+              else if (activeWidgetId === 'quotes') {
                 newConfig.lightMode = {
                   ...newConfig.lightMode,
                   textColor: theme.text,
@@ -1575,8 +1784,84 @@ function NotionWidgetBuilder({ initialWidgetId, onBack }) {
                   authorColor: theme.accent,
                   backgroundColor: theme.text
                 };
-              } else {
-                // Generic color mapping for other widgets
+                newConfig.bgColor = theme.background;
+              } 
+              
+              else if (activeWidgetId === 'lifeProgress') {
+                newConfig.lightMode = {
+                  ...newConfig.lightMode,
+                  textColor: theme.text,
+                  barColor: theme.primary,
+                  backgroundColor: theme.background
+                };
+                newConfig.darkMode = {
+                  ...newConfig.darkMode,
+                  textColor: theme.background,
+                  barColor: theme.accent,
+                  backgroundColor: theme.text
+                };
+                newConfig.bgColor = theme.background;
+              }
+              
+              // ===== WIDGETS WITH SEPARATE COLOR PROPS =====
+              else if (activeWidgetId === 'counter') {
+                newConfig.lightTextColor = theme.text;
+                newConfig.darkTextColor = theme.background;
+                newConfig.bgColor = theme.background;
+              } 
+              
+              else if (activeWidgetId === 'weather') {
+                newConfig.bgColor = theme.background;
+                newConfig.textColor = theme.text;
+                newConfig.accentColor = theme.primary;
+              } 
+              
+              else if (activeWidgetId === 'imageGallery') {
+                newConfig.bgColor = theme.background;
+              }
+              
+              // ===== BUTTON GENERATOR (SPECIAL CASE) =====
+              else if (activeWidgetId === 'newButtonGenerator') {
+                // Apply to all buttons using full color palette
+                if (newConfig.buttons && Array.isArray(newConfig.buttons)) {
+                  newConfig.buttons = newConfig.buttons.map((btn, idx) => ({
+                    ...btn,
+                    backgroundColor: theme.palette[idx % theme.palette.length] || theme.primary,
+                    textColor: theme.background,
+                    outlineColor: theme.accent,
+                    hoverBackgroundColor: theme.background,
+                    hoverTextColor: theme.palette[idx % theme.palette.length] || theme.primary
+                  }));
+                }
+                newConfig.bgColor = theme.background;
+              }
+              
+              // ===== INLINE WIDGETS =====
+              else if (activeWidgetId === 'simpleList') {
+                newConfig.bgColor = theme.background;
+                newConfig.textColor = theme.text;
+                newConfig.accentColor = theme.primary;
+              } 
+              
+              else if (activeWidgetId === 'pomodoro') {
+                newConfig.bgColor = theme.background;
+                newConfig.textColor = theme.text;
+                newConfig.accentColor = theme.primary;
+              } 
+              
+              else if (activeWidgetId === 'logo') {
+                newConfig.bgColor = theme.background;
+                // Apply brand color to glow effect
+                newConfig.glowColor = theme.primary;
+              } 
+              
+              else if (activeWidgetId === 'cosmic') {
+                newConfig.bgColor = theme.text; // Use darker color for cosmic bg
+                newConfig.accentColor = theme.primary;
+              }
+              
+              // ===== FALLBACK FOR ANY FUTURE WIDGETS =====
+              else {
                 newConfig.bgColor = theme.background;
                 newConfig.textColor = theme.text;
                 if (newConfig.accentColor !== undefined) {
@@ -1761,19 +2046,61 @@ export default function App() {
   const urlConfigStr = search.get('config');
 
   // State management
-  const [view, setView] = useState('landing'); // 'landing' | 'builder'
+  const [view, setView] = useState('landing'); // 'landing' | 'builder' | 'brand-generator'
   const [selectedWidgetId, setSelectedWidgetId] = useState('clock');
+  const [globalBrandTheme, setGlobalBrandTheme] = useState(null);
 
   const navigateToBuilder = (id) => {
     setSelectedWidgetId(id);
     setView('builder');
   };
 
+  const navigateToBrandGenerator = () => {
+    setView('brand-generator');
+  };
+
   const navigateToHome = () => {
     setView('landing');
   };
 
-  // Handle embed mode - render widget standalone
+  const handleThemeGenerated = (theme) => {
+    setGlobalBrandTheme(theme);
+  };
+
+  // Load global brand theme on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('jazer_global_brand_theme');
+    const isActive = localStorage.getItem('jazer_global_brand_active');
+    if (savedTheme && isActive === 'true') {
+      try {
+        setGlobalBrandTheme(JSON.parse(savedTheme));
+      } catch (e) {
+        console.error('Failed to load global brand theme:', e);
+      }
+    }
+  }, []);
+
+  // View routing
+  if (view === 'landing') {
+    return <WidgetLandingPage onSelect={navigateToBuilder} onBrandGenerator={navigateToBrandGenerator} />;
+  }
+
+  if (view === 'brand-generator') {
+    return (
+      <BrandThemeGenerator 
+        onBack={navigateToHome} 
+        onThemeGenerated={handleThemeGenerated}
+      />
+    );
+  }
+
+  return (
+    <NotionWidgetBuilder 
+      initialWidgetId={selectedWidgetId} 
+      onBack={navigateToHome}
+      globalBrandTheme={globalBrandTheme}
+    />
+  );
   if (isEmbedMode && urlWidgetId && WIDGET_REGISTRY[urlWidgetId]) {
     const widgetDef = WIDGET_REGISTRY[urlWidgetId];
     let widgetConfig = widgetDef.defaultConfig;
@@ -1817,9 +2144,18 @@ export default function App() {
       `}</style>
 
       {view === 'landing' ? (
-        <WidgetLandingPage onSelect={navigateToBuilder} />
+        <WidgetLandingPage onSelect={navigateToBuilder} onBrandGenerator={navigateToBrandGenerator} />
+      ) : view === 'brand-generator' ? (
+        <BrandThemeGenerator 
+          onBack={navigateToHome} 
+          onThemeGenerated={handleThemeGenerated}
+        />
       ) : (
-        <NotionWidgetBuilder initialWidgetId={selectedWidgetId} onBack={navigateToHome} />
+        <NotionWidgetBuilder 
+          initialWidgetId={selectedWidgetId} 
+          onBack={navigateToHome}
+          globalBrandTheme={globalBrandTheme}
+        />
       )}
     </>
   );
