@@ -2072,7 +2072,7 @@ export default function App() {
     // Decode config from URL if provided
     if (urlConfigStr) {
       const decoded = decodeConfig(urlConfigStr);
-      widgetConfig = decoded || widgetDef.defaultConfig || {};
+      widgetConfig = decoded || widgetConfig;
     }
 
     const theme = resolveThemeColors(widgetConfig, false);
