@@ -42,10 +42,10 @@ import { countdownConfig } from './widgets/Countdown/config';
 import { CountdownWidget } from './widgets/Countdown/CountdownWidget';
 import { generateCountdownHTML, generateCountdownScript } from './widgets/Countdown/export';
 
-import { newButtonGenerator } from './widgets/newButtonGenerator/ButtonGeneratorWidget'; // Named import
+// Button generator - named import
+import { newButtonGenerator } from './widgets/newButtonGenerator/ButtonGeneratorWidget';
 
 import BrandLogoUploader from './components/BrandLogoUploader';
-import BrandThemeGenerator from './components/BrandThemeGenerator';
 import BrandThemeGenerator from './components/BrandThemeGenerator';
 
 // --- CONSTANTS & CONFIG ---
@@ -1483,7 +1483,7 @@ function WidgetLandingPage({ onSelect, onBrandGenerator }) {
                 </div>
               </div>
               <button
-                onClick={navigateToBrandGenerator}
+                onClick={onBrandGenerator}
                 className="px-8 py-4 rounded-lg font-bold text-lg flex items-center justify-center gap-3 transition-all btn-neon hover:scale-105 whitespace-nowrap"
                 style={{ backgroundColor: 'var(--jazer-electric-purple)', color: 'var(--jazer-stardust-white)' }}
               >
@@ -1524,22 +1524,6 @@ function NotionWidgetBuilder({ initialWidgetId, onBack, globalBrandTheme }) {
     document.head.appendChild(link);
     return () => document.head.removeChild(link);
   }, []);
-
-  // Update brandTheme when globalBrandTheme changes
-  useEffect(() => {
-    if (globalBrandTheme) {
-      setBrandTheme(globalBrandTheme);
-      // Optionally apply colors to current config
-      if (globalBrandTheme.primary) {
-        setConfig(prev => ({
-          ...prev,
-          bgColor: globalBrandTheme.background || prev.bgColor,
-          textColor: globalBrandTheme.text || prev.textColor,
-          accentColor: globalBrandTheme.primary || prev.accentColor
-        }));
-      }
-    }
-  }, [globalBrandTheme]);
 
   // Update brandTheme when globalBrandTheme changes
   useEffect(() => {
@@ -2080,35 +2064,15 @@ export default function App() {
     }
   }, []);
 
-  // View routing
-  if (view === 'landing') {
-    return <WidgetLandingPage onSelect={navigateToBuilder} onBrandGenerator={navigateToBrandGenerator} />;
-  }
-
-  if (view === 'brand-generator') {
-    return (
-      <BrandThemeGenerator 
-        onBack={navigateToHome} 
-        onThemeGenerated={handleThemeGenerated}
-      />
-    );
-  }
-
-  return (
-    <NotionWidgetBuilder 
-      initialWidgetId={selectedWidgetId} 
-      onBack={navigateToHome}
-      globalBrandTheme={globalBrandTheme}
-    />
-  );
+  // Handle embed mode first (before normal app render)
   if (isEmbedMode && urlWidgetId && WIDGET_REGISTRY[urlWidgetId]) {
     const widgetDef = WIDGET_REGISTRY[urlWidgetId];
-    let widgetConfig = widgetDef.defaultConfig;
+    let widgetConfig = widgetDef.defaultConfig || {};
 
     // Decode config from URL if provided
     if (urlConfigStr) {
       const decoded = decodeConfig(urlConfigStr);
-      widgetConfig = decoded || widgetDef.defaultConfig;
+      widgetConfig = decoded || widgetDef.defaultConfig || {};
     }
 
     const theme = resolveThemeColors(widgetConfig, false);
@@ -2135,7 +2099,7 @@ export default function App() {
     );
   }
 
-  // Normal app mode
+  // Normal app mode - View routing
   return (
     <>
       <style>{`
